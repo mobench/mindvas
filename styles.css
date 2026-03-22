@@ -1,0 +1,56 @@
+/* Canvas MindMap Plugin Styles */
+
+/* Mindmap mode toggle button in canvas toolbar */
+.canvas-mindmap-toggle-btn {
+	color: var(--text-muted);
+}
+
+.canvas-mindmap-toggle-btn:hover {
+	color: var(--text-normal);
+}
+
+.canvas-mindmap-toggle-btn.is-active {
+	color: var(--interactive-accent);
+}
+
+/* Smooth node repositioning animation */
+.canvas-node.mindmap-animating {
+	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth group resize animation */
+.canvas-node.mindmap-group-animating {
+	transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+	            width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+	            height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Table of Contents sidebar panel */
+.canvas-mindmap-toc {
+	padding: 4px 0;
+}
+
+.canvas-mindmap-toc-group .tree-item-inner {
+	font-weight: var(--font-semibold);
+}
+
+.canvas-mindmap-toc .tree-item-children {
+	overflow: hidden;
+	max-height: 500px;
+	transition: max-height 0.25s ease-in-out;
+}
+
+.canvas-mindmap-toc .tree-item.is-collapsed > .tree-item-children {
+	max-height: 0;
+}
+
+.canvas-mindmap-toc .canvas-mindmap-toc-item.is-selected {
+	background-color: var(--background-modifier-active-hover);
+}
+
+.canvas-mindmap-toc-empty {
+	padding: 12px 10px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-style: italic;
+}
