@@ -41,8 +41,6 @@ export class MindMapSettingTab extends PluginSettingTab {
 			await this.plugin.saveSettings();
 		}, 500);
 
-		new Setting(containerEl).setName("Mindvas").setHeading();
-
 		new Setting(containerEl)
 			.setName("Default mindmap mode")
 			.setDesc("Whether canvases default to mindmap mode (can be toggled per canvas)")

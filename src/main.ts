@@ -178,9 +178,10 @@ export default class CanvasMindMapPlugin extends Plugin {
 				} else {
 					const leaf = this.app.workspace.getRightLeaf(false);
 					if (leaf) {
-						void leaf.setViewState({ type: TOC_VIEW_TYPE }).then(() => {
-							this.app.workspace.revealLeaf(leaf);
-						});
+						void leaf.setViewState({ type: TOC_VIEW_TYPE }).then(
+							() => this.app.workspace.revealLeaf(leaf),
+							() => { /* view state failed */ }
+						);
 					}
 				}
 			},
@@ -193,7 +194,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 				if (!(file instanceof TFolder)) return;
 
 				menu.addItem((item) => {
-					item.setTitle("Import FreeMind (.mm) to canvas")
+					item.setTitle("Import mind map (.mm) to canvas")
 						.setIcon("file-input")
 						.onClick(() => this.importFreeMindFile(file.path));
 				});
@@ -203,7 +204,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 		// Import FreeMind: command palette
 		this.addCommand({
 			id: "mindmap-import-freemind",
-			name: "Import FreeMind (.mm) file to canvas",
+			name: "Import mind map (.mm) file to canvas",
 			callback: () => this.importFreeMindFile(),
 		});
 
@@ -561,7 +562,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 			}
 
 			// Preview mode: measure via .markdown-preview-sizer children
-			const sizer = node.contentEl?.querySelector(".markdown-preview-sizer") as HTMLElement | null;
+			const sizer = node.contentEl?.querySelector<HTMLElement>(".markdown-preview-sizer");
 			if (!sizer) {
 				// DOM not rendered (off-screen node) — apply width, collect for height retry
 				if (node.width !== targetW) {
@@ -614,7 +615,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 	): void {
 		let changed = false;
 		for (const node of nodes) {
-			const sizer = node.contentEl?.querySelector(".markdown-preview-sizer") as HTMLElement | null;
+			const sizer = node.contentEl?.querySelector<HTMLElement>(".markdown-preview-sizer");
 			if (!sizer) continue;
 
 			let contentH = 0;
@@ -665,7 +666,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 
 				if (!canvasData) {
 					new Notice(
-						"Failed to parse FreeMind file. Make sure it is a valid .mm file."
+						"Failed to parse .mm file. Make sure it is a valid mind map file."
 					);
 					return;
 				}

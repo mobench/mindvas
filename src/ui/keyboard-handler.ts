@@ -331,7 +331,7 @@ export class KeyboardHandler {
 		const doc = iframe?.contentDocument ?? node.contentEl?.ownerDocument;
 		if (!doc) return null;
 		const container = iframe?.contentDocument ?? node.contentEl;
-		const cmContent = container?.querySelector(".cm-content") as CMContentElement | null;
+		const cmContent = container?.querySelector<CMContentElement>(".cm-content");
 		return cmContent?.cmView?.view ?? null;
 	}
 

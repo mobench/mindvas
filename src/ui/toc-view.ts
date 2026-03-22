@@ -31,7 +31,7 @@ export class TocView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "Mind map TOC";
+		return "Mind map table of contents";
 	}
 
 	getIcon(): string {
