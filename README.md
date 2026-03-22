@@ -1,4 +1,4 @@
-# Mapsidian
+# Mindvas
 
 Turn Canvas into a powerful mind mapping tool with keyboard-driven node operations, auto-layout, and branch coloring.
 
@@ -57,7 +57,7 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). You can assi
 ### From community plugins (coming soon)
 
 1. Open Settings > Community plugins
-2. Search for "Mapsidian"
+2. Search for "Mindvas"
 3. Click Install, then Enable
 
 ### Manual installation

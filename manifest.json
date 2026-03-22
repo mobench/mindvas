@@ -1,6 +1,6 @@
 {
-	"id": "mapsidian",
-	"name": "Mapsidian",
+	"id": "mindvas",
+	"name": "Mindvas",
 	"version": "0.1.0",
 	"minAppVersion": "1.5.0",
 	"description": "Turn Canvas into a powerful mind mapping tool with keyboard shortcuts, auto-layout, and branch coloring.",

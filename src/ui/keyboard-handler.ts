@@ -357,11 +357,11 @@ export class KeyboardHandler {
 	 */
 	private registerPhysicalKeyShortcuts(): void {
 		const shortcuts = [
-			{ code: "Period", key: ".", ctrl: true, shift: false, alt: false, cmdId: "mapsidian:mindmap-add-child" },
-			{ code: "KeyS", key: "s", ctrl: true, shift: true, alt: false, cmdId: "mapsidian:mindmap-flip-branch" },
-			{ code: "KeyD", key: "d", ctrl: true, shift: true, alt: false, cmdId: "mapsidian:mindmap-toggle-balance" },
-			{ code: "KeyL", key: "l", ctrl: true, shift: true, alt: false, cmdId: "mapsidian:mindmap-resize-subtree" },
-			{ code: "KeyR", key: "r", ctrl: true, shift: true, alt: true, cmdId: "mapsidian:mindmap-resize-all" },
+			{ code: "Period", key: ".", ctrl: true, shift: false, alt: false, cmdId: "mindvas:mindmap-add-child" },
+			{ code: "KeyS", key: "s", ctrl: true, shift: true, alt: false, cmdId: "mindvas:mindmap-flip-branch" },
+			{ code: "KeyD", key: "d", ctrl: true, shift: true, alt: false, cmdId: "mindvas:mindmap-toggle-balance" },
+			{ code: "KeyL", key: "l", ctrl: true, shift: true, alt: false, cmdId: "mindvas:mindmap-resize-subtree" },
+			{ code: "KeyR", key: "r", ctrl: true, shift: true, alt: true, cmdId: "mindvas:mindmap-resize-all" },
 		];
 
 		this.plugin.registerDomEvent(document, "keydown", (e: KeyboardEvent) => {
