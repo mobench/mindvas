@@ -1,5 +1,5 @@
 import { ItemView, WorkspaceLeaf, setIcon, Menu } from "obsidian";
-import type { Canvas, CanvasNode } from "../types/canvas-internal";
+import type { Canvas, CanvasNode, CanvasView as CanvasViewType } from "../types/canvas-internal";
 import { buildForest, TreeNode, getDescendants } from "../mindmap/tree-model";
 
 export const TOC_VIEW_TYPE = "mindvas-toc";
@@ -31,16 +31,16 @@ export class TocView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		// eslint-disable-next-line obsidianmd/ui/sentence-case
-		return "Mind Map TOC";
+		return "Mind map TOC";
 	}
 
 	getIcon(): string {
 		return "list-tree";
 	}
 
-	async onOpen(): Promise<void> {
+	onOpen(): Promise<void> {
 		this.contentEl.addClass("mindvas-toc");
+		return Promise.resolve();
 	}
 
 	/**
@@ -54,8 +54,7 @@ export class TocView extends ItemView {
 
 		// Store the canvas leaf for click navigation
 		this.canvasLeaf = this.app.workspace.getLeavesOfType("canvas")
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-			.find(l => (l.view as any)?.canvas === canvas) ?? null;
+			.find(l => (l.view as unknown as CanvasViewType)?.canvas === canvas) ?? null;
 
 		const forest = buildForest(canvas);
 		if (forest.length === 0) {

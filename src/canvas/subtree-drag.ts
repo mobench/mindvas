@@ -50,8 +50,8 @@ export function registerSubtreeDragHandler(canvas: Canvas, canvasApi: CanvasAPI)
 
 		// Wrap moveTo so descendants move in the same call stack.
 		// Use prototype's moveTo (not instance) to avoid stacked wrappers.
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-		originalMoveTo = Object.getPrototypeOf(node).moveTo.bind(node);
+		const proto = Object.getPrototypeOf(node) as CanvasNode;
+		originalMoveTo = proto.moveTo.bind(node);
 		node.moveTo = (pos: { x: number; y: number }) => {
 			const dx = pos.x - node.x;
 			const dy = pos.y - node.y;
@@ -59,8 +59,8 @@ export function registerSubtreeDragHandler(canvas: Canvas, canvasApi: CanvasAPI)
 			// Call descendants' moveTo via prototype to bypass any
 			// per-instance wrappers — prevents infinite recursion.
 			for (const desc of cachedDescendants!) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				Object.getPrototypeOf(desc).moveTo.call(
+				const descProto = Object.getPrototypeOf(desc) as CanvasNode;
+				descProto.moveTo.call(
 					desc, { x: desc.x + dx, y: desc.y + dy }
 				);
 			}
@@ -70,8 +70,7 @@ export function registerSubtreeDragHandler(canvas: Canvas, canvasApi: CanvasAPI)
 	function clearDragSession(): void {
 		if (draggedNode && originalMoveTo) {
 			// Remove instance override to restore prototype method lookup
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-			delete (draggedNode as any).moveTo;
+			delete (draggedNode as { moveTo?: unknown }).moveTo;
 		}
 		draggedNode = null;
 		cachedDescendants = null;

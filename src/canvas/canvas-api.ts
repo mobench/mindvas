@@ -127,7 +127,6 @@ export class CanvasAPI {
 		const selection = canvas.selection;
 		if (selection.size !== 1) return null;
 
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const item = selection.values().next().value;
 		if (!item || !("nodeEl" in item)) return null;
 

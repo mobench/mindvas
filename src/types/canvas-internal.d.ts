@@ -109,6 +109,9 @@ export interface Canvas {
 	zoomToFit(): void;
 
 	posFromEvt(e: MouseEvent): { x: number; y: number };
+
+	undo?: () => void;
+	redo?: () => void;
 }
 
 export interface CanvasFileData {
@@ -147,4 +150,23 @@ export interface CanvasEdgeFileData {
 export interface CanvasView extends ItemView {
 	canvas: Canvas;
 	file: { path: string };
+}
+
+/** Minimal CodeMirror 6 EditorView interface for text extraction. */
+export interface CMEditorView {
+	state: {
+		selection: { main: { from: number; to: number } };
+		sliceDoc: (from: number, to: number) => string;
+	};
+	dispatch: (tr: { changes: { from: number; to: number; insert: string } }) => void;
+}
+
+/** DOM element with a CodeMirror view reference attached by Obsidian. */
+export interface CMContentElement extends HTMLElement {
+	cmView?: { view: CMEditorView };
+}
+
+/** Obsidian's undocumented App.commands API for programmatic command execution. */
+export interface ObsidianCommands {
+	executeCommandById: (id: string) => boolean;
 }

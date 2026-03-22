@@ -41,7 +41,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 			await this.plugin.saveSettings();
 		}, 500);
 
-		new Setting(containerEl).setName("Canvas mindmap").setHeading();
+		new Setting(containerEl).setName("Mindvas").setHeading();
 
 		new Setting(containerEl)
 			.setName("Default mindmap mode")
@@ -85,7 +85,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setValue(String(this.plugin.settings.horizontalGap))
-					.onChange(async (value) => {
+					.onChange((value) => {
 						const num = parseInt(value, 10);
 						if (!isNaN(num) && num > 0) {
 							this.plugin.settings.horizontalGap = num;
@@ -100,7 +100,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setValue(String(this.plugin.settings.verticalGap))
-					.onChange(async (value) => {
+					.onChange((value) => {
 						const num = parseInt(value, 10);
 						if (!isNaN(num) && num > 0) {
 							this.plugin.settings.verticalGap = num;
@@ -115,7 +115,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setValue(String(this.plugin.settings.defaultNodeWidth))
-					.onChange(async (value) => {
+					.onChange((value) => {
 						const num = parseInt(value, 10);
 						if (!isNaN(num) && num > 0) {
 							this.plugin.settings.defaultNodeWidth = num;
@@ -130,7 +130,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setValue(String(this.plugin.settings.defaultNodeHeight))
-					.onChange(async (value) => {
+					.onChange((value) => {
 						const num = parseInt(value, 10);
 						if (!isNaN(num) && num > 0) {
 							this.plugin.settings.defaultNodeHeight = num;
@@ -145,7 +145,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setValue(String(this.plugin.settings.maxNodeHeight))
-					.onChange(async (value) => {
+					.onChange((value) => {
 						const num = parseInt(value, 10);
 						if (!isNaN(num) && num > 0) {
 							this.plugin.settings.maxNodeHeight = num;
@@ -160,7 +160,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setValue(String(this.plugin.settings.navigationZoomPadding))
-					.onChange(async (value) => {
+					.onChange((value) => {
 						const num = parseInt(value, 10);
 						if (!isNaN(num) && num >= 0) {
 							this.plugin.settings.navigationZoomPadding = num;

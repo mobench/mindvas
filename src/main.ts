@@ -1,5 +1,5 @@
-import { Plugin, Notice, TFolder, debounce, WorkspaceLeaf, setIcon } from "obsidian";
-import type { Canvas } from "./types/canvas-internal";
+import { Plugin, Notice, TFile, TFolder, debounce, WorkspaceLeaf, setIcon } from "obsidian";
+import type { Canvas, CreateNodeOptions } from "./types/canvas-internal";
 import { CanvasAPI } from "./canvas/canvas-api";
 import { NodeOperations } from "./mindmap/node-operations";
 import { LayoutEngine } from "./mindmap/layout-engine";
@@ -45,7 +45,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 	/** Original canvas methods for unwrapping on cleanup. */
 	private origCanvasMethods: {
 		requestSave?: () => void;
-		createGroupNode?: (options: any) => any;
+		createGroupNode?: (options: CreateNodeOptions & { label?: string }) => import("./types/canvas-internal").CanvasNode;
 	} = {};
 	/** Set to true on unload to prevent deferred callbacks from running. */
 	private unloaded = false;
@@ -170,16 +170,17 @@ export default class CanvasMindMapPlugin extends Plugin {
 		// Command: Toggle TOC panel
 		this.addCommand({
 			id: "mindmap-toggle-toc",
-			name: "Toggle Table of Contents",
-			callback: async () => {
+			name: "Toggle table of contents",
+			callback: () => {
 				const leaves = this.app.workspace.getLeavesOfType(TOC_VIEW_TYPE);
 				if (leaves.length > 0) {
 					leaves[0].detach();
 				} else {
 					const leaf = this.app.workspace.getRightLeaf(false);
 					if (leaf) {
-						await leaf.setViewState({ type: TOC_VIEW_TYPE });
-						this.app.workspace.revealLeaf(leaf);
+						void leaf.setViewState({ type: TOC_VIEW_TYPE }).then(() => {
+							this.app.workspace.revealLeaf(leaf);
+						});
 					}
 				}
 			},
@@ -192,7 +193,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 				if (!(file instanceof TFolder)) return;
 
 				menu.addItem((item) => {
-					item.setTitle("Import FreeMind (.mm) to Canvas")
+					item.setTitle("Import FreeMind (.mm) to canvas")
 						.setIcon("file-input")
 						.onClick(() => this.importFreeMindFile(file.path));
 				});
@@ -202,7 +203,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 		// Import FreeMind: command palette
 		this.addCommand({
 			id: "mindmap-import-freemind",
-			name: "Import FreeMind (.mm) file to Canvas",
+			name: "Import FreeMind (.mm) file to canvas",
 			callback: () => this.importFreeMindFile(),
 		});
 
@@ -369,7 +370,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 			origSave();
 			this.debouncedTocRefresh();
 		};
-		canvas.createGroupNode = (options: any) => {
+		canvas.createGroupNode = (options: CreateNodeOptions & { label?: string }) => {
 			const group = origCreateGroup(options);
 			this.updateGroupBounds(canvas);
 			return group;
@@ -642,59 +643,61 @@ export default class CanvasMindMapPlugin extends Plugin {
 	 * Import a FreeMind .mm file and create a .canvas file.
 	 * @param folderPath Optional target folder; defaults to vault root.
 	 */
-	private async importFreeMindFile(folderPath?: string): Promise<void> {
+	private importFreeMindFile(folderPath?: string): void {
 		// Open native file picker for .mm files
 		const input = document.createElement("input");
 		input.type = "file";
 		input.accept = ".mm";
-		const onChange = async () => {
-			input.removeEventListener("change", onChange);
+		const handler = () => {
+			input.removeEventListener("change", handler);
 			const file = input.files?.[0];
 			if (!file) return;
 
-			const xml = await file.text();
-			const canvasData = freemindToCanvas(xml, {
-				nodeWidth: this.settings.defaultNodeWidth,
-				nodeHeight: this.settings.defaultNodeHeight,
-				maxNodeHeight: this.settings.maxNodeHeight,
-				horizontalGap: this.settings.horizontalGap,
-				verticalGap: this.settings.verticalGap,
-			});
+			void (async () => {
+				const xml = await file.text();
+				const canvasData = freemindToCanvas(xml, {
+					nodeWidth: this.settings.defaultNodeWidth,
+					nodeHeight: this.settings.defaultNodeHeight,
+					maxNodeHeight: this.settings.maxNodeHeight,
+					horizontalGap: this.settings.horizontalGap,
+					verticalGap: this.settings.verticalGap,
+				});
 
-			if (!canvasData) {
-				new Notice(
-					"Failed to parse FreeMind file. Make sure it is a valid .mm file."
+				if (!canvasData) {
+					new Notice(
+						"Failed to parse FreeMind file. Make sure it is a valid .mm file."
+					);
+					return;
+				}
+
+				const baseName = file.name.replace(/\.mm$/i, "");
+				const folder = folderPath ? folderPath + "/" : "";
+				let canvasPath = `${folder}${baseName}.canvas`;
+
+				// Avoid overwriting existing files
+				let counter = 1;
+				while (this.app.vault.getAbstractFileByPath(canvasPath)) {
+					canvasPath = `${folder}${baseName} ${counter}.canvas`;
+					counter++;
+				}
+
+				await this.app.vault.create(
+					canvasPath,
+					JSON.stringify(canvasData, null, "\t")
 				);
-				return;
-			}
 
-			const baseName = file.name.replace(/\.mm$/i, "");
-			const folder = folderPath ? folderPath + "/" : "";
-			let canvasPath = `${folder}${baseName}.canvas`;
+				// Open the new canvas
+				const created = this.app.vault.getAbstractFileByPath(canvasPath);
+				if (created instanceof TFile) {
+					await this.app.workspace.getLeaf(false).openFile(created);
+				}
 
-			// Avoid overwriting existing files
-			let counter = 1;
-			while (this.app.vault.getAbstractFileByPath(canvasPath)) {
-				canvasPath = `${folder}${baseName} ${counter}.canvas`;
-				counter++;
-			}
-
-			await this.app.vault.create(
-				canvasPath,
-				JSON.stringify(canvasData, null, "\t")
-			);
-
-			// Open the new canvas
-			const created = this.app.vault.getAbstractFileByPath(canvasPath);
-			if (created) {
-				await this.app.workspace.getLeaf(false).openFile(created as any);
-			}
-
-			new Notice(
-				`Imported "${file.name}" as "${canvasPath}"`
-			);
+				new Notice(
+					`Imported "${file.name}" as "${canvasPath}"`
+				);
+			})();
 		};
-		input.addEventListener("change", onChange);
+		input.addEventListener("change", handler);
 		input.click();
 	}
 
@@ -707,7 +710,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 	private toggleMindmapMode(canvas: Canvas): void {
 		const data = canvas.getData();
 		const newValue = !this.isMindmapCanvas(canvas);
-		(data as any).mindmap = newValue;
+		data.mindmap = newValue;
 		canvas.setData(data);
 		canvas.requestSave();
 
