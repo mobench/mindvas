@@ -1,18 +1,18 @@
 # Canvas MindMap
 
-Turn Obsidian Canvas into a powerful mind mapping tool with keyboard-driven node operations, auto-layout, branch coloring, and collapse/expand.
+Turn Obsidian Canvas into a powerful mind mapping tool with keyboard-driven node operations, auto-layout, and branch coloring.
 
 ## Features
 
 - **Keyboard-driven editing** — Add child/sibling nodes, delete nodes, and navigate the tree entirely from the keyboard
 - **Auto-layout** — Automatically arranges nodes in a clean tree layout after every operation
 - **Branch coloring** — Assigns distinct colors to each top-level branch for visual clarity
-- **Collapse/expand** — Collapse subtrees to focus on specific branches, expand them when needed
 - **Balanced layout** — Distribute children on both sides of a root node for a centered mind map
 - **Flip branches** — Move a branch to the opposite side of its parent
 - **Spatial navigation** — Navigate between nodes using directional commands (right, left, up, down)
 - **Auto-resize** — Nodes automatically resize to fit their content as you type
 - **Resize to fit** — Batch-resize selected subtree or all nodes to fit their content
+- **Subtree drag** — Dragging a node moves its entire subtree; hold Alt to move a single node
 - **FreeMind import** — Import `.mm` files from FreeMind into Obsidian Canvas
 - **Table of contents** — A sidebar view showing the tree structure for quick navigation
 - **Non-Latin keyboard support** — Physical key fallback for Arabic, Cyrillic, and other keyboard layouts
@@ -23,6 +23,7 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). You can assi
 
 | Command | Description |
 |---------|-------------|
+| Re-layout mind map | Recalculate and apply layout to the entire canvas |
 | Edit selected node | Start editing the selected node |
 | Add child node | Create a new child node (selected text moves to child) |
 | Add sibling node | Create a sibling node below the current one |

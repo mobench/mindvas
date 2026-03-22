@@ -3,7 +3,7 @@
 	"name": "Canvas MindMap",
 	"version": "0.1.0",
 	"minAppVersion": "1.5.0",
-	"description": "Turn Obsidian Canvas into a powerful mind mapping tool with keyboard shortcuts, auto-layout, branch coloring, and collapse/expand.",
+	"description": "Turn Obsidian Canvas into a powerful mind mapping tool with keyboard shortcuts, auto-layout, and branch coloring.",
 	"author": "mobench",
 	"isDesktopOnly": true
 }
