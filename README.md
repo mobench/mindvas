@@ -67,6 +67,10 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). You can assi
 3. Copy the downloaded files into that folder
 4. Enable the plugin in Settings > Community plugins
 
+## Support
+
+If you find this plugin useful, you can [buy me a coffee](https://buymeacoffee.com/mobench).
+
 ## Disclosures
 
 - This plugin does **not** make any network requests
