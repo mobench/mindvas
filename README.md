@@ -27,8 +27,8 @@
 
 1. Install the plugin and open any Canvas
 2. Mindmap mode activates automatically — start typing to create your root node
-3. Press `Tab` to add a child node, `Enter` for a sibling
-4. Use arrow keys to navigate between nodes
+3. Use the command palette (`Ctrl/Cmd+P`) to add child nodes, siblings, navigate, and more
+4. Assign your own hotkeys in **Settings > Hotkeys** for faster workflow
 5. The layout updates automatically as you build your map
 
 ## Installation
