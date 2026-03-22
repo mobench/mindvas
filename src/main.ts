@@ -730,7 +730,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 		if (!controls) return;
 
 		const btn = document.createElement('div');
-		btn.addClass('canvas-mindmap-toggle-btn', 'clickable-icon');
+		btn.addClass('mapsidian-toggle-btn', 'clickable-icon');
 		btn.setAttribute('aria-label', 'Toggle mindmap mode');
 		this.registerDomEvent(btn, 'click', (e) => {
 			e.stopPropagation();

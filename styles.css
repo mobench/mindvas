@@ -1,15 +1,15 @@
-/* Canvas MindMap Plugin Styles */
+/* Mapsidian Plugin Styles */
 
 /* Mindmap mode toggle button in canvas toolbar */
-.canvas-mindmap-toggle-btn {
+.mapsidian-toggle-btn {
 	color: var(--text-muted);
 }
 
-.canvas-mindmap-toggle-btn:hover {
+.mapsidian-toggle-btn:hover {
 	color: var(--text-normal);
 }
 
-.canvas-mindmap-toggle-btn.is-active {
+.mapsidian-toggle-btn.is-active {
 	color: var(--interactive-accent);
 }
 
@@ -26,29 +26,29 @@
 }
 
 /* Table of Contents sidebar panel */
-.canvas-mindmap-toc {
+.mapsidian-toc {
 	padding: 4px 0;
 }
 
-.canvas-mindmap-toc-group .tree-item-inner {
+.mapsidian-toc-group .tree-item-inner {
 	font-weight: var(--font-semibold);
 }
 
-.canvas-mindmap-toc .tree-item-children {
+.mapsidian-toc .tree-item-children {
 	overflow: hidden;
 	max-height: 500px;
 	transition: max-height 0.25s ease-in-out;
 }
 
-.canvas-mindmap-toc .tree-item.is-collapsed > .tree-item-children {
+.mapsidian-toc .tree-item.is-collapsed > .tree-item-children {
 	max-height: 0;
 }
 
-.canvas-mindmap-toc .canvas-mindmap-toc-item.is-selected {
+.mapsidian-toc .mapsidian-toc-item.is-selected {
 	background-color: var(--background-modifier-active-hover);
 }
 
-.canvas-mindmap-toc-empty {
+.mapsidian-toc-empty {
 	padding: 12px 10px;
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);

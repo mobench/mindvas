@@ -1,6 +1,6 @@
-# Canvas MindMap
+# Mapsidian
 
-Turn Obsidian Canvas into a powerful mind mapping tool with keyboard-driven node operations, auto-layout, and branch coloring.
+Turn Canvas into a powerful mind mapping tool with keyboard-driven node operations, auto-layout, and branch coloring.
 
 ## Features
 
@@ -57,13 +57,13 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). You can assi
 ### From community plugins (coming soon)
 
 1. Open Settings > Community plugins
-2. Search for "Canvas MindMap"
+2. Search for "Mapsidian"
 3. Click Install, then Enable
 
 ### Manual installation
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/mobench/canvas-mindmap/releases/latest)
-2. Create a folder `canvas-mindmap` in your vault's `.obsidian/plugins/` directory
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/mobench/mapsidian/releases/latest)
+2. Create a folder `mapsidian` in your vault's `.obsidian/plugins/` directory
 3. Copy the downloaded files into that folder
 4. Enable the plugin in Settings > Community plugins
 

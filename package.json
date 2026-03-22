@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-canvas-mindmap",
+	"name": "mapsidian",
 	"version": "0.1.0",
-	"description": "Turn Obsidian Canvas into a powerful mind mapping tool",
+	"description": "Turn Canvas into a powerful mind mapping tool",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf, setIcon, Menu } from "obsidian";
 import type { Canvas, CanvasNode } from "../types/canvas-internal";
 import { buildForest, TreeNode, getDescendants } from "../mindmap/tree-model";
 
-export const TOC_VIEW_TYPE = "canvas-mindmap-toc";
+export const TOC_VIEW_TYPE = "mapsidian-toc";
 
 interface GroupInfo {
 	node: CanvasNode;
@@ -39,7 +39,7 @@ export class TocView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		this.contentEl.addClass("canvas-mindmap-toc");
+		this.contentEl.addClass("mapsidian-toc");
 	}
 
 	/**
@@ -58,7 +58,7 @@ export class TocView extends ItemView {
 		const forest = buildForest(canvas);
 		if (forest.length === 0) {
 			this.contentEl.createDiv({
-				cls: "canvas-mindmap-toc-empty",
+				cls: "mapsidian-toc-empty",
 				text: "No root nodes",
 			});
 			return;
@@ -128,7 +128,7 @@ export class TocView extends ItemView {
 	): void {
 		const treeItem = container.createDiv({ cls: "tree-item" });
 		const self = treeItem.createDiv({
-			cls: "tree-item-self is-clickable canvas-mindmap-toc-item",
+			cls: "tree-item-self is-clickable mapsidian-toc-item",
 		});
 		self.createDiv({
 			cls: "tree-item-inner",
@@ -256,7 +256,7 @@ export class TocView extends ItemView {
 		});
 
 		const self = treeItem.createDiv({
-			cls: "tree-item-self is-clickable canvas-mindmap-toc-group",
+			cls: "tree-item-self is-clickable mapsidian-toc-group",
 		});
 
 		const collapseIcon = self.createDiv({ cls: "tree-item-icon collapse-icon" });
@@ -294,7 +294,7 @@ export class TocView extends ItemView {
 		this.rootElMap.clear();
 		this.contentEl.empty();
 		this.contentEl.createDiv({
-			cls: "canvas-mindmap-toc-empty",
+			cls: "mapsidian-toc-empty",
 			text: "Open a canvas to see root nodes",
 		});
 	}
