@@ -62,8 +62,8 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). You can assi
 
 ### Manual installation
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/mobench/mapsidian/releases/latest)
-2. Create a folder `mapsidian` in your vault's `.obsidian/plugins/` directory
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/mobench/canvas-mindmap/releases/latest)
+2. Create a folder `mindvas` in your vault's `.obsidian/plugins/` directory
 3. Copy the downloaded files into that folder
 4. Enable the plugin in Settings > Community plugins
 
