@@ -14,11 +14,11 @@ export function getEditorElements(node: CanvasNode): {
 	scroller: HTMLElement | null;
 	cmContent: HTMLElement | null;
 } {
-	const iframe = node.contentEl?.querySelector("iframe") as HTMLIFrameElement | null;
+	const iframe = node.contentEl?.querySelector<HTMLIFrameElement>("iframe");
 	if (!iframe?.contentDocument) return { iframe: null, scroller: null, cmContent: null };
 
-	const scroller = iframe.contentDocument.querySelector(".cm-scroller") as HTMLElement | null;
-	const cmContent = iframe.contentDocument.querySelector(".cm-content") as HTMLElement | null;
+	const scroller = iframe.contentDocument.querySelector<HTMLElement>(".cm-scroller");
+	const cmContent = iframe.contentDocument.querySelector<HTMLElement>(".cm-content");
 	return { iframe, scroller, cmContent };
 }
 

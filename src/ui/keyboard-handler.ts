@@ -9,7 +9,6 @@ import {
 	findTreeForNode,
 	getNextSibling,
 	getPrevSibling,
-	getFirstChild,
 	TreeNode,
 } from "../mindmap/tree-model";
 
@@ -327,11 +326,14 @@ export class KeyboardHandler {
 	/**
 	 * Access the CodeMirror 6 EditorView inside a canvas node's iframe.
 	 */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private getEditorView(node: CanvasNode): any {
-		const iframe = node.contentEl?.querySelector("iframe") as HTMLIFrameElement | null;
+		const iframe = node.contentEl?.querySelector<HTMLIFrameElement>("iframe");
 		const doc = iframe?.contentDocument ?? node.contentEl?.ownerDocument;
 		if (!doc) return null;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unnecessary-type-assertion
 		const cmContent = (iframe?.contentDocument ?? node.contentEl)?.querySelector(".cm-content") as any;
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 		return cmContent?.cmView?.view ?? null;
 	}
 
@@ -340,12 +342,17 @@ export class KeyboardHandler {
 	 * Returns the selected text, or null if nothing is selected.
 	 */
 	private extractAndDeleteSelection(node: CanvasNode): string | null {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const view = this.getEditorView(node);
 		if (!view) return null;
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const { from, to } = view.state.selection.main;
 		if (from === to) return null;
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
 		const text = view.state.sliceDoc(from, to);
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
 		view.dispatch({ changes: { from, to, insert: "" } });
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 		return text;
 	}
 
@@ -371,13 +378,16 @@ export class KeyboardHandler {
 			if (!ctrlOrCmd) return;
 
 			// Undo/Redo fallback for non-Latin layouts
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
 			const canvasAny = canvas as any;
 			if (e.code === "KeyZ" && !e.altKey && e.key.toLowerCase() !== "z") {
 				e.preventDefault();
 				e.stopPropagation();
 				if (e.shiftKey) {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 					canvasAny.redo?.();
 				} else {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 					canvasAny.undo?.();
 				}
 				return;
@@ -385,11 +395,14 @@ export class KeyboardHandler {
 			if (e.code === "KeyY" && !e.shiftKey && !e.altKey && e.key.toLowerCase() !== "y") {
 				e.preventDefault();
 				e.stopPropagation();
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 				canvasAny.redo?.();
 				return;
 			}
 
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 			const commands = (this.plugin.app as any).commands;
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			if (!commands?.executeCommandById) return;
 
 			for (const s of shortcuts) {
@@ -405,6 +418,7 @@ export class KeyboardHandler {
 					// Non-Latin layout: Obsidian won't match, so we handle it
 					e.preventDefault();
 					e.stopPropagation();
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 					commands.executeCommandById(s.cmdId);
 					return;
 				}

@@ -1,6 +1,6 @@
 import type { Canvas, CanvasNode, CanvasEdge } from "../types/canvas-internal";
 import { CanvasAPI } from "../canvas/canvas-api";
-import { buildForest, TreeNode, getDescendants } from "./tree-model";
+import { buildForest, TreeNode } from "./tree-model";
 
 /**
  * Default color palette for top-level branches.

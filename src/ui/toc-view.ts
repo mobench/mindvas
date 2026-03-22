@@ -31,6 +31,7 @@ export class TocView extends ItemView {
 	}
 
 	getDisplayText(): string {
+		// eslint-disable-next-line obsidianmd/ui/sentence-case
 		return "Mind Map TOC";
 	}
 
@@ -53,6 +54,7 @@ export class TocView extends ItemView {
 
 		// Store the canvas leaf for click navigation
 		this.canvasLeaf = this.app.workspace.getLeavesOfType("canvas")
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 			.find(l => (l.view as any)?.canvas === canvas) ?? null;
 
 		const forest = buildForest(canvas);

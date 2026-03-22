@@ -84,6 +84,7 @@ export function registerGroupDragHandler(canvas: Canvas, canvasApi: CanvasAPI): 
 	const upHandler = (): void => {
 		if (frozenNodes.length === 0) return;
 		for (const node of frozenNodes) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 			delete (node as any).moveTo;
 		}
 		frozenNodes.length = 0;
@@ -96,6 +97,7 @@ export function registerGroupDragHandler(canvas: Canvas, canvasApi: CanvasAPI): 
 	return () => {
 		if (frozenNodes.length > 0) {
 			for (const node of frozenNodes) {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 				delete (node as any).moveTo;
 			}
 			frozenNodes.length = 0;

@@ -1,4 +1,4 @@
-import type { Canvas, CanvasNode, CanvasEdge } from "../types/canvas-internal";
+import type { Canvas, CanvasNode } from "../types/canvas-internal";
 
 export type BranchDirection = "left" | "right";
 
