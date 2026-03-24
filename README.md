@@ -2,9 +2,12 @@
 
 ![Mindvas Banner](assets/banner.png)
 
+**Transform Obsidian Canvas into a powerful mind mapping tool.**
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/github/v/release/mobench/canvas-mindmap)](https://github.com/mobench/canvas-mindmap/releases)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0+-purple.svg)](https://obsidian.md)
+[![Docs](https://img.shields.io/badge/docs-GitBook-blue.svg)](https://mindvas.gitbook.io)
 
 </div>
 
@@ -13,23 +16,25 @@
 ## Features
 
 - **Keyboard-driven editing** — Add, delete, and navigate nodes entirely from the keyboard
-- **Auto-layout** — Nodes arrange themselves into a clean tree after every operation
+- **Auto-layout** — Contour-based tree layout packs nodes tightly with left/right branch support
+- **Map outline** — Sidebar panel with groups, search, drag-and-drop, inline rename, and bidirectional highlight sync
+- **Node referencing** — Copy clickable links to any node; paste in notes or other canvases for instant navigation
+- **Insert between nodes** — Alt+click a connection point to insert a new node between parent and child
+- **Forest layout** — Arrange multiple trees within a group into a clean grid
 - **Branch coloring** — Each top-level branch gets a distinct color automatically
-- **Balanced layout** — Distribute children on both sides of the root for a centered mind map
 - **Subtree drag** — Dragging a node moves its entire subtree; hold `Alt` to move a single node
-- **Spatial navigation** — Move between nodes directionally (right, left, up, down)
 - **Auto-resize** — Nodes resize to fit their content as you type
 - **FreeMind import** — Import `.mm` files directly into Canvas
-- **Table of contents** — Sidebar view for quick navigation through the tree
-- **Non-Latin keyboard support** — Physical key fallback for Arabic, Cyrillic, and other layouts
+- **Non-Latin keyboard support** — Physical key fallback for Arabic, Hebrew, Cyrillic, and other layouts
 
 ## Quick Start
 
 1. Install the plugin and open any Canvas
-2. Mindmap mode activates automatically — start typing to create your root node
-3. Use the command palette (`Ctrl/Cmd+P`) to add child nodes, siblings, navigate, and more
-4. Assign your own hotkeys in **Settings > Hotkeys** for faster workflow
-5. The layout updates automatically as you build your map
+2. Click the brain icon in the canvas toolbar to enable mindmap mode
+3. Create a text node — this is your root
+4. Use the command palette (`Ctrl/Cmd+P`) to add child nodes, siblings, navigate, and more
+5. Assign your own hotkeys in **Settings > Hotkeys** for faster workflow
+6. The Map outline panel appears in the right sidebar for navigation
 
 ## Installation
 
@@ -55,7 +60,6 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). Assign your 
 
 | Command | Description |
 |---------|-------------|
-| Re-layout mind map | Recalculate and apply layout to the entire canvas |
 | Edit selected node | Start editing the selected node |
 | Add child node | Create a new child node (selected text moves to child) |
 | Add sibling node | Create a sibling node below the current one |
@@ -63,12 +67,24 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). Assign your 
 | Flip branch to other side | Move a branch to the opposite side of its parent |
 | Toggle balanced layout | Distribute children evenly on both sides, or collapse to one side |
 | Navigate right/left/up/down | Move selection spatially through the tree |
+| Re-layout mind map | Recalculate and apply layout to the entire canvas |
+| Layout forest | Arrange trees within the selected group into a grid |
+| Detach subtree | Disconnect a branch into an independent tree |
 | Resize & re-layout subtree | Resize nodes in the subtree to fit content and re-layout |
 | Resize all nodes to fit content | Resize every node in the canvas to fit its content |
 | Apply branch colors | Manually trigger branch color assignment |
 | Toggle mindmap mode | Enable or disable mindmap mode for the current canvas |
-| Toggle table of contents | Open or close the TOC sidebar |
 | Import FreeMind file | Import a `.mm` mind map file into the current canvas |
+
+## Mouse Actions
+
+| Action | Result |
+|--------|--------|
+| Alt+click connection point | Insert a new node between parent and child |
+| Alt+click a node | Select the entire tree |
+| Ctrl+click a node | Zoom to fit the branch |
+| Right-click a node | Copy node link (for cross-canvas referencing) |
+| Right-click a group | Layout forest, copy group link |
 
 <details>
 <summary>Settings</summary>
@@ -86,6 +102,10 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). Assign your 
 | Navigation zoom padding | Extra space around the target node when zooming (px) | 200 |
 
 </details>
+
+## Documentation
+
+Full documentation is available at **[mindvas.gitbook.io](https://mindvas.gitbook.io)**.
 
 ## Contributing
 
