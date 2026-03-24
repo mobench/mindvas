@@ -252,7 +252,10 @@ export class CanvasAPI {
 	/**
 	 * Select a node and start editing it.
 	 */
-	selectAndEdit(canvas: Canvas, node: CanvasNode, zoomPadding: number = 0): void {
+	/**
+	 * Select a node and zoom to it with padding.
+	 */
+	selectAndZoom(canvas: Canvas, node: CanvasNode, zoomPadding: number): void {
 		canvas.selectOnly(node);
 		if (zoomPadding > 0) {
 			const cx = node.x + node.width / 2;
@@ -266,6 +269,10 @@ export class CanvasAPI {
 		} else {
 			canvas.zoomToSelection();
 		}
+	}
+
+	selectAndEdit(canvas: Canvas, node: CanvasNode, zoomPadding: number = 0): void {
+		this.selectAndZoom(canvas, node, zoomPadding);
 		setTimeout(() => {
 			node.startEditing();
 		}, 50);

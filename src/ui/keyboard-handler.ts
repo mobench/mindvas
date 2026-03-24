@@ -40,6 +40,9 @@ export class KeyboardHandler {
 			checkCallback: (checking: boolean) => {
 				const canvas = this.canvasApi.getActiveCanvas();
 				if (!canvas) return false;
+				// Don't consume Enter when focus is outside the canvas (e.g. outline rename)
+				const activeEl = document.activeElement;
+				if (activeEl && !canvas.wrapperEl.contains(activeEl)) return false;
 				const node = this.canvasApi.getSelectedNode(canvas);
 				if (!node) return false;
 				if (node.isEditing) return false;
@@ -155,7 +158,7 @@ export class KeyboardHandler {
 				if (!wasEditing) this.onBeforeLeaveNode?.();
 				const parentNode = this.nodeOps.flipBranch(canvas, node);
 				if (parentNode) {
-					this.layoutEngine.restackSiblings(canvas, parentNode.id);
+					this.layoutEngine.layoutChildren(canvas, parentNode.id);
 					if (this.autoColorEnabled()) {
 						this.branchColors.applyColors(canvas);
 					}

@@ -124,94 +124,6 @@ export class LayoutEngine {
 	}
 
 	/**
-	 * Restack the parent's direct children vertically on each side.
-	 * Each child's subtree moves as a block (preserving internal arrangement).
-	 * Does NOT recursively rearrange descendant positions.
-	 */
-	restackSiblings(canvas: Canvas, parentNodeId: string): void {
-		const forest = buildForest(canvas);
-		const parentTreeNode = findTreeForNode(forest, parentNodeId);
-		if (!parentTreeNode || parentTreeNode.children.length === 0) return;
-
-		const parentCx = parentTreeNode.canvasNode.x + parentTreeNode.canvasNode.width / 2;
-		const parentCy = parentTreeNode.canvasNode.y + parentTreeNode.canvasNode.height / 2;
-
-		// Partition children by side
-		const rightChildren = parentTreeNode.children.filter(c => {
-			const cx = c.canvasNode.x + c.canvasNode.width / 2;
-			return cx >= parentCx;
-		});
-		const leftChildren = parentTreeNode.children.filter(c => {
-			const cx = c.canvasNode.x + c.canvasNode.width / 2;
-			return cx < parentCx;
-		});
-
-		this.restackGroup(canvas, rightChildren, parentCy);
-		this.restackGroup(canvas, leftChildren, parentCy);
-
-		updateAllEdgeSides(canvas);
-		canvas.requestSave();
-		canvas.requestFrame();
-	}
-
-	/**
-	 * Restack a group of siblings vertically, centered on parentCy.
-	 * Each sibling's subtree is block-moved (internal structure preserved).
-	 */
-	private restackGroup(
-		canvas: Canvas,
-		children: TreeNode[],
-		parentCy: number
-	): void {
-		if (children.length === 0) return;
-
-		// Sort by current Y position
-		const sorted = [...children].sort(
-			(a, b) => a.canvasNode.y - b.canvasNode.y
-		);
-
-		// Compute subtree bounding box for each child
-		const bboxes = sorted.map(child => {
-			const descendants = getDescendants(child);
-			const allNodes = [child, ...descendants];
-			let minY = Infinity;
-			let maxY = -Infinity;
-			for (const n of allNodes) {
-				const top = n.canvasNode.y;
-				const bottom = top + n.canvasNode.height;
-				if (top < minY) minY = top;
-				if (bottom > maxY) maxY = bottom;
-			}
-			return { child, descendants, minY, maxY, height: maxY - minY };
-		});
-
-		// Total height with gaps
-		const totalHeight = bboxes.reduce((sum, b) => sum + b.height, 0)
-			+ (bboxes.length - 1) * this.config.verticalGap;
-
-		// Starting Y to center the block around parentCy
-		let currentY = parentCy - totalHeight / 2;
-
-		// Apply positions
-		for (const bbox of bboxes) {
-			const deltaY = currentY - bbox.minY;
-			if (deltaY !== 0) {
-				bbox.child.canvasNode.moveTo({
-					x: bbox.child.canvasNode.x,
-					y: bbox.child.canvasNode.y + deltaY,
-				});
-				for (const desc of bbox.descendants) {
-					desc.canvasNode.moveTo({
-						x: desc.canvasNode.x,
-						y: desc.canvasNode.y + deltaY,
-					});
-				}
-			}
-			currentY += bbox.height + this.config.verticalGap;
-		}
-	}
-
-	/**
 	 * Layout a group of same-side children, vertically centered around root.
 	 * Uses contour-based packing for compact spacing.
 	 */
@@ -382,6 +294,144 @@ export class LayoutEngine {
 		}
 
 		return { yOffsets, combinedContour };
+	}
+
+	/**
+	 * Arrange multiple trees within a group using flow-based packing.
+	 * Lays out each tree internally first, then packs them into rows
+	 * targeting a roughly square overall shape.
+	 */
+	layoutForest(canvas: Canvas, groupId: string): void {
+		const group = canvas.nodes.get(groupId);
+		if (!group) return;
+
+		// Layout all trees internally first
+		this.layout(canvas);
+
+		// Rebuild forest after layout (positions changed)
+		const forest = buildForest(canvas);
+		if (forest.length === 0) return;
+
+		// Find roots inside this group
+		const roots = forest.filter(root => {
+			const cx = root.canvasNode.x + root.canvasNode.width / 2;
+			const cy = root.canvasNode.y + root.canvasNode.height / 2;
+			return cx >= group.x && cx <= group.x + group.width
+				&& cy >= group.y && cy <= group.y + group.height;
+		});
+		if (roots.length <= 1) return;
+
+		// Compute bounding box for each tree
+		const treeBboxes = roots.map(root => ({
+			root,
+			bbox: this.getTreeBbox(root, canvas),
+		}));
+
+		// Sort by current position (reading order: Y then X)
+		treeBboxes.sort((a, b) => {
+			const dy = a.root.canvasNode.y - b.root.canvasNode.y;
+			if (Math.abs(dy) > 50) return dy;
+			return a.root.canvasNode.x - b.root.canvasNode.x;
+		});
+
+		// Compute tree dimensions (wider gaps between trees than within trees)
+		const gap = this.config.horizontalGap * 1.5;
+		const vGap = this.config.verticalGap * 3;
+		const treeSizes = treeBboxes.map(t => ({
+			w: t.bbox.maxX - t.bbox.minX,
+			h: t.bbox.maxY - t.bbox.minY,
+		}));
+
+		// Target width: average tree width × ceil(sqrt(N)) for a square-ish grid
+		const treesPerRow = Math.ceil(Math.sqrt(roots.length));
+		const avgWidth = treeSizes.reduce((sum, s) => sum + s.w, 0) / treeSizes.length;
+		const targetWidth = treesPerRow * (avgWidth + gap);
+
+		// Flow-pack into rows
+		const rows: number[][] = [];
+		let currentRow: number[] = [];
+		let currentRowWidth = 0;
+
+		for (let i = 0; i < treeBboxes.length; i++) {
+			const treeW = treeSizes[i].w + (currentRow.length > 0 ? gap : 0);
+			if (currentRow.length > 0 && currentRowWidth + treeW > targetWidth) {
+				rows.push(currentRow);
+				currentRow = [i];
+				currentRowWidth = treeSizes[i].w;
+			} else {
+				currentRow.push(i);
+				currentRowWidth += treeW;
+			}
+		}
+		if (currentRow.length > 0) rows.push(currentRow);
+
+		// Position trees in rows
+		const PADDING = 20;
+		const originX = group.x + PADDING;
+		const originY = group.y + PADDING;
+		let cursorY = originY;
+
+		const positions = new Map<string, NodePosition>();
+
+		for (const row of rows) {
+			const rowHeight = Math.max(...row.map(i => treeSizes[i].h));
+			let cursorX = originX;
+
+			for (const i of row) {
+				const t = treeBboxes[i];
+				const dx = cursorX - t.bbox.minX;
+				const dy = cursorY - t.bbox.minY;
+
+				// Shift root + all descendants
+				const allNodes = [t.root, ...getDescendants(t.root)];
+				for (const treeNode of allNodes) {
+					const n = treeNode.canvasNode;
+					positions.set(n.id, { x: n.x + dx, y: n.y + dy });
+				}
+
+				cursorX += treeSizes[i].w + gap;
+			}
+
+			cursorY += rowHeight + vGap;
+		}
+
+		this.applyPositions(canvas, positions);
+		updateAllEdgeSides(canvas);
+
+		// Resize group to fit all positioned trees (don't rely on updateGroupBounds
+		// which uses center-in-bounds and would miss nodes moved outside original bounds)
+		let gMinX = Infinity, gMinY = Infinity, gMaxX = -Infinity, gMaxY = -Infinity;
+		for (const [nodeId, pos] of positions) {
+			const node = canvas.nodes.get(nodeId);
+			if (!node) continue;
+			gMinX = Math.min(gMinX, pos.x);
+			gMinY = Math.min(gMinY, pos.y);
+			gMaxX = Math.max(gMaxX, pos.x + node.width);
+			gMaxY = Math.max(gMaxY, pos.y + node.height);
+		}
+		group.moveAndResize({
+			x: gMinX - PADDING,
+			y: gMinY - PADDING,
+			width: (gMaxX - gMinX) + PADDING * 2,
+			height: (gMaxY - gMinY) + PADDING * 2,
+		});
+		canvas.requestSave();
+	}
+
+	private getTreeBbox(
+		root: TreeNode,
+		canvas: Canvas
+	): { minX: number; minY: number; maxX: number; maxY: number } {
+		const allNodes = [root, ...getDescendants(root)];
+		let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+		for (const treeNode of allNodes) {
+			const n = treeNode.canvasNode;
+			minX = Math.min(minX, n.x);
+			minY = Math.min(minY, n.y);
+			maxX = Math.max(maxX, n.x + n.width);
+			maxY = Math.max(maxY, n.y + n.height);
+		}
+		return { minX, minY, maxX, maxY };
 	}
 
 	/**

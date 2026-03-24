@@ -1,5 +1,5 @@
-import { Plugin, Notice, TFile, TFolder, debounce, WorkspaceLeaf, setIcon } from "obsidian";
-import type { Canvas, CreateNodeOptions } from "./types/canvas-internal";
+import { Plugin, Notice, TFile, TFolder, Menu, debounce, WorkspaceLeaf, setIcon } from "obsidian";
+import type { Canvas, CanvasNode, CanvasEdge, CreateNodeOptions } from "./types/canvas-internal";
 import { CanvasAPI } from "./canvas/canvas-api";
 import { NodeOperations } from "./mindmap/node-operations";
 import { LayoutEngine } from "./mindmap/layout-engine";
@@ -16,7 +16,7 @@ import { registerDragEndHandler } from "./canvas/edge-updater";
 import { registerSubtreeDragHandler } from "./canvas/subtree-drag";
 import { registerGroupDragHandler } from "./canvas/group-drag";
 import { registerAutoResize, AutoResizeHandle, getEditorElements } from "./ui/auto-resize";
-import { TocView, TOC_VIEW_TYPE } from "./ui/toc-view";
+import { OutlineView, OUTLINE_VIEW_TYPE, getRootTitle } from "./ui/outline-view";
 import { freemindToCanvas } from "./import/freemind-import";
 import { getGroupIds, buildForest, findTreeForNode } from "./mindmap/tree-model";
 
@@ -38,6 +38,8 @@ export default class CanvasMindMapPlugin extends Plugin {
 	private interceptedCanvas: Canvas | null = null;
 	private toggleBtnEl: HTMLElement | null = null;
 	private cleanupGroupBoundsHandler: (() => void) | null = null;
+	private cleanupSelectionSyncHandler: (() => void) | null = null;
+	private cleanupInsertNodeHandler: (() => void) | null = null;
 	/** Pending timers/observers/RAFs to cancel on unload or canvas switch. */
 	private pendingTimers: Set<ReturnType<typeof setTimeout>> = new Set();
 	private pendingRafs: Set<number> = new Set();
@@ -46,6 +48,8 @@ export default class CanvasMindMapPlugin extends Plugin {
 	private origCanvasMethods: {
 		requestSave?: () => void;
 		createGroupNode?: (options: CreateNodeOptions & { label?: string }) => import("./types/canvas-internal").CanvasNode;
+		undo?: () => void;
+		redo?: () => void;
 	} = {};
 	/** Set to true on unload to prevent deferred callbacks from running. */
 	private unloaded = false;
@@ -95,6 +99,75 @@ export default class CanvasMindMapPlugin extends Plugin {
 				if (checking) return true;
 				this.layoutEngine.layout(canvas);
 				this.updateGroupBounds(canvas);
+			},
+		});
+
+		// Command: Layout forest (arrange trees within a group)
+		this.addCommand({
+			id: "mindmap-layout-forest",
+			name: "Layout forest",
+			checkCallback: (checking: boolean) => {
+				const canvas = this.canvasApi.getActiveCanvas();
+				if (!canvas) return false;
+				if (!this.isMindmapCanvas(canvas)) return false;
+
+				// Find the group containing the selected node
+				const selected = this.canvasApi.getSelectedNode(canvas);
+				if (!selected) return false;
+
+				const groupIds = getGroupIds(canvas);
+				const cx = selected.x + selected.width / 2;
+				const cy = selected.y + selected.height / 2;
+				let targetGroupId: string | null = null;
+				let smallestArea = Infinity;
+
+				for (const gid of groupIds) {
+					const g = canvas.nodes.get(gid);
+					if (!g) continue;
+					if (cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height) {
+						const area = g.width * g.height;
+						if (area < smallestArea) {
+							smallestArea = area;
+							targetGroupId = gid;
+						}
+					}
+				}
+
+				if (!targetGroupId) return false;
+				if (checking) return true;
+				this.layoutEngine.layoutForest(canvas, targetGroupId);
+			},
+		});
+
+		// Command: Detach subtree as independent tree
+		this.addCommand({
+			id: "mindmap-detach-subtree",
+			name: "Detach subtree as independent tree",
+			checkCallback: (checking: boolean) => {
+				const canvas = this.canvasApi.getActiveCanvas();
+				if (!canvas) return false;
+				if (!this.isMindmapCanvas(canvas)) return false;
+
+				const node = this.canvasApi.getSelectedNode(canvas);
+				if (!node) return false;
+
+				const parent = this.canvasApi.getParentNode(canvas, node);
+				if (!parent) return false;
+
+				if (checking) return true;
+
+				const edges = this.canvasApi.getOutgoingEdges(canvas, parent.id);
+				const edge = edges.find(e => e.to.node.id === node.id);
+				if (!edge) return;
+
+				canvas.removeEdge(edge);
+				this.canvasApi.invalidateEdgeIndex();
+
+				node.setColor("");
+
+				this.layoutEngine.layoutChildren(canvas, parent.id);
+				this.updateGroupBounds(canvas);
+				canvas.requestSave();
 			},
 		});
 
@@ -164,27 +237,13 @@ export default class CanvasMindMapPlugin extends Plugin {
 			})
 		);
 
-		// Register TOC sidebar view
-		this.registerView(TOC_VIEW_TYPE, (leaf) => new TocView(leaf));
+		// Register outline sidebar view
+		this.registerView(OUTLINE_VIEW_TYPE, (leaf) => new OutlineView(leaf));
 
-		// Command: Toggle TOC panel
-		this.addCommand({
-			id: "mindmap-toggle-toc",
-			name: "Toggle table of contents",
-			callback: () => {
-				const leaves = this.app.workspace.getLeavesOfType(TOC_VIEW_TYPE);
-				if (leaves.length > 0) {
-					leaves[0].detach();
-				} else {
-					const leaf = this.app.workspace.getRightLeaf(false);
-					if (leaf) {
-						void leaf.setViewState({ type: TOC_VIEW_TYPE }).then(
-							() => this.app.workspace.revealLeaf(leaf),
-							() => { /* view state failed */ }
-						);
-					}
-				}
-			},
+		// Show outline if a mindmap canvas is already open on startup
+		this.app.workspace.onLayoutReady(() => {
+			const leaf = this.app.workspace.activeLeaf;
+			if (leaf) this.onLeafChange(leaf);
 		});
 
 		// Import FreeMind: right-click context menu on folders
@@ -200,6 +259,68 @@ export default class CanvasMindMapPlugin extends Plugin {
 				});
 			})
 		);
+
+		// Node referencing: "Copy node link" in canvas node context menu
+		this.registerEvent(
+			this.app.workspace.on("canvas:node-menu", (menu: Menu, node: CanvasNode) => {
+				const canvas = this.canvasApi.getActiveCanvas();
+
+				menu.addItem((item) => {
+					item.setTitle("Copy node link")
+						.setIcon("link")
+						.onClick(() => {
+							const title = getRootTitle(node.text);
+							const canvasPath = node.canvas.view.file.path;
+							navigator.clipboard.writeText(`[${title}](obsidian://mindvas-navigate?canvas=${encodeURIComponent(canvasPath)}&id=${node.id})`);
+							new Notice("Node link copied");
+						});
+				});
+
+				if (canvas) {
+					const groupIds = getGroupIds(canvas);
+					if (groupIds.has(node.id)) {
+						menu.addItem((item) => {
+							item.setTitle("Layout forest")
+								.setIcon("layout-grid")
+								.onClick(() => {
+									this.layoutEngine.layoutForest(canvas, node.id);
+									this.updateGroupBounds(canvas);
+								});
+						});
+					}
+				}
+			})
+		);
+
+		// Node referencing: handle obsidian://mindvas-navigate protocol
+		this.registerObsidianProtocolHandler("mindvas-navigate", async (params) => {
+			const nodeId = params.id;
+			if (!nodeId) return;
+
+			const canvasPath = params.canvas;
+			if (canvasPath) {
+				const file = this.app.vault.getAbstractFileByPath(canvasPath);
+				if (file && file instanceof TFile) {
+					const leaf = this.app.workspace.getLeaf();
+					await leaf.openFile(file);
+					await new Promise(resolve => setTimeout(resolve, 200));
+				}
+			}
+
+			const canvas = this.canvasApi.getActiveCanvas() ?? this.canvasApi.getAnyCanvas();
+			if (!canvas) {
+				new Notice("Canvas not found");
+				return;
+			}
+
+			const node = canvas.nodes.get(nodeId);
+			if (!node) {
+				new Notice("Target node not found");
+				return;
+			}
+
+			this.canvasApi.selectAndZoom(canvas, node, this.settings.navigationZoomPadding);
+		});
 
 		// Import FreeMind: command palette
 		this.addCommand({
@@ -239,6 +360,14 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.cleanupGroupBoundsHandler();
 			this.cleanupGroupBoundsHandler = null;
 		}
+		if (this.cleanupSelectionSyncHandler) {
+			this.cleanupSelectionSyncHandler();
+			this.cleanupSelectionSyncHandler = null;
+		}
+		if (this.cleanupInsertNodeHandler) {
+			this.cleanupInsertNodeHandler();
+			this.cleanupInsertNodeHandler = null;
+		}
 		if (this.autoResizeHandle) {
 			this.autoResizeHandle.cleanup();
 			this.autoResizeHandle = null;
@@ -253,8 +382,10 @@ export default class CanvasMindMapPlugin extends Plugin {
 	 * Called when the active leaf changes — set up canvas-specific UI.
 	 */
 	private onLeafChange(leaf: WorkspaceLeaf | null): void {
-		// Don't clean up when focus moves to our own TOC sidebar
-		if (leaf?.view?.getViewType() === TOC_VIEW_TYPE) return;
+		// Don't clean up when focus moves to sidebar panels
+		if (leaf?.view?.getViewType() === OUTLINE_VIEW_TYPE) return;
+		const root = leaf?.getRoot();
+		if (root && root !== this.app.workspace.rootSplit) return;
 
 		// Cancel pending async operations and unwrap previous canvas
 		this.cancelPendingAsync();
@@ -281,6 +412,14 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.cleanupGroupBoundsHandler();
 			this.cleanupGroupBoundsHandler = null;
 		}
+		if (this.cleanupSelectionSyncHandler) {
+			this.cleanupSelectionSyncHandler();
+			this.cleanupSelectionSyncHandler = null;
+		}
+		if (this.cleanupInsertNodeHandler) {
+			this.cleanupInsertNodeHandler();
+			this.cleanupInsertNodeHandler = null;
+		}
 		if (this.autoResizeHandle) {
 			this.autoResizeHandle.cleanup();
 			this.autoResizeHandle = null;
@@ -292,7 +431,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 				this.toggleBtnEl.remove();
 				this.toggleBtnEl = null;
 			}
-			this.clearToc();
+			this.hideOutline();
 			return;
 		}
 
@@ -320,6 +459,114 @@ export default class CanvasMindMapPlugin extends Plugin {
 		canvas.wrapperEl.addEventListener('pointerup', onDragEnd);
 		this.cleanupGroupBoundsHandler = () =>
 			canvas.wrapperEl.removeEventListener('pointerup', onDragEnd);
+
+		// Sync outline highlight when canvas selection changes (click or Escape)
+		const syncOutlineSelection = () => {
+			requestAnimationFrame(() => {
+				for (const leaf of this.app.workspace.getLeavesOfType(OUTLINE_VIEW_TYPE)) {
+					if (leaf.view instanceof OutlineView) {
+						leaf.view.syncHighlightFromCanvas(canvas);
+					}
+				}
+			});
+		};
+		const onCanvasClick = () => syncOutlineSelection();
+		const onCanvasKeydown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") syncOutlineSelection();
+		};
+		canvas.wrapperEl.addEventListener("click", onCanvasClick);
+		canvas.wrapperEl.addEventListener("keydown", onCanvasKeydown);
+		this.cleanupSelectionSyncHandler = () => {
+			canvas.wrapperEl.removeEventListener("click", onCanvasClick);
+			canvas.wrapperEl.removeEventListener("keydown", onCanvasKeydown);
+		};
+
+		// Insert node between parent and child via Alt+click on connection point
+		const onInsertNodeClick = (e: MouseEvent) => {
+			if (!e.altKey) return;
+
+			const target = e.target as HTMLElement;
+			const connectionPoint = target.closest(".canvas-node-connection-point");
+			if (!connectionPoint) return;
+
+			const side = connectionPoint.getAttribute("data-side");
+			if (!side) return;
+
+			// Connection point is an overlay, not inside .canvas-node — find node by position
+			const canvasPos = canvas.posFromEvt(e);
+			let clickedNode: CanvasNode | null = null;
+			let closestDist = Infinity;
+			for (const node of canvas.nodes.values()) {
+				const cx = node.x + node.width / 2;
+				const cy = node.y + node.height / 2;
+				const dist = Math.hypot(canvasPos.x - cx, canvasPos.y - cy);
+				if (dist < closestDist) {
+					closestDist = dist;
+					clickedNode = node;
+				}
+			}
+			if (!clickedNode) return;
+
+			// Collect ALL edges on this side of the clicked node
+			const incomingEdges: CanvasEdge[] = [];
+			const outgoingEdges: CanvasEdge[] = [];
+			for (const edge of canvas.edges.values()) {
+				if (edge.to.node.id === clickedNode.id && edge.to.side === side) {
+					incomingEdges.push(edge);
+				}
+				if (edge.from.node.id === clickedNode.id && edge.from.side === side) {
+					outgoingEdges.push(edge);
+				}
+			}
+
+			const edges = outgoingEdges.length > 0 ? outgoingEdges : incomingEdges;
+			if (edges.length === 0) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+
+			const isOutgoing = outgoingEdges.length > 0;
+			const fromSide = edges[0].from.side;
+			const toSide = edges[0].to.side;
+
+			if (isOutgoing) {
+				// Insert between clickedNode and all its children on this side
+				const children = edges.map(edge => edge.to.node);
+				const avgY = children.reduce((s, c) => s + c.y + c.height / 2, 0) / children.length;
+				const midX = (clickedNode.x + clickedNode.width + children[0].x) / 2
+					- this.settings.defaultNodeWidth / 2;
+				const midY = avgY - this.settings.defaultNodeHeight / 2;
+
+				const newNode = this.canvasApi.createTextNode(canvas, midX, midY);
+				for (const edge of edges) canvas.removeEdge(edge);
+				this.canvasApi.invalidateEdgeIndex();
+				this.canvasApi.createEdge(canvas, clickedNode, newNode, fromSide, toSide);
+				for (const child of children) {
+					this.canvasApi.createEdge(canvas, newNode, child, fromSide, toSide);
+				}
+
+				this.finishInsertNode(canvas, newNode, clickedNode);
+			} else {
+				// Insert between parent and clickedNode (single incoming edge)
+				const edge = edges[0];
+				const parentNode = edge.from.node;
+				const midX = (parentNode.x + parentNode.width / 2 + clickedNode.x + clickedNode.width / 2) / 2
+					- this.settings.defaultNodeWidth / 2;
+				const midY = (parentNode.y + parentNode.height / 2 + clickedNode.y + clickedNode.height / 2) / 2
+					- this.settings.defaultNodeHeight / 2;
+
+				const newNode = this.canvasApi.createTextNode(canvas, midX, midY);
+				canvas.removeEdge(edge);
+				this.canvasApi.invalidateEdgeIndex();
+				this.canvasApi.createEdge(canvas, parentNode, newNode, fromSide, toSide);
+				this.canvasApi.createEdge(canvas, newNode, clickedNode, fromSide, toSide);
+
+				this.finishInsertNode(canvas, newNode, parentNode);
+			}
+		};
+		canvas.wrapperEl.addEventListener("click", onInsertNodeClick, true);
+		this.cleanupInsertNodeHandler = () =>
+			canvas.wrapperEl.removeEventListener("click", onInsertNodeClick, true);
 
 		// Set up auto-resize handler (grow/shrink nodes with content)
 		this.autoResizeHandle = registerAutoResize(
@@ -364,36 +611,59 @@ export default class CanvasMindMapPlugin extends Plugin {
 		// Intercept canvas methods (store originals for cleanup)
 		const origSave = canvas.requestSave.bind(canvas);
 		const origCreateGroup = canvas.createGroupNode.bind(canvas);
-		this.origCanvasMethods = { requestSave: origSave, createGroupNode: origCreateGroup };
+		const origUndo = canvas.undo?.bind(canvas);
+		const origRedo = canvas.redo?.bind(canvas);
+		this.origCanvasMethods = { requestSave: origSave, createGroupNode: origCreateGroup, undo: origUndo, redo: origRedo };
 		this.interceptedCanvas = canvas;
 
 		canvas.requestSave = () => {
 			origSave();
-			this.debouncedTocRefresh();
+			this.debouncedOutlineRefresh();
 		};
 		canvas.createGroupNode = (options: CreateNodeOptions & { label?: string }) => {
 			const group = origCreateGroup(options);
 			this.updateGroupBounds(canvas);
 			return group;
 		};
-		this.refreshToc(canvas);
+		if (origUndo) {
+			canvas.undo = () => {
+				origUndo();
+				this.debouncedOutlineRefresh();
+			};
+		}
+		if (origRedo) {
+			canvas.redo = () => {
+				origRedo();
+				this.debouncedOutlineRefresh();
+			};
+		}
+		if (this.isMindmapCanvas(canvas)) {
+			this.showOutline(canvas);
+		} else {
+			this.hideOutline();
+		}
 	}
 
-	private debouncedTocRefresh = debounce(() => {
+	private debouncedOutlineRefresh = debounce(() => {
 		if (this.unloaded) return;
 		const canvas = this.canvasApi.getActiveCanvas()
 			?? this.canvasApi.getAnyCanvas();
 		if (canvas) {
-			this.refreshToc(canvas);
-		} else {
-			this.clearToc();
+			this.refreshOutline(canvas);
 		}
 	}, 300);
 
-	private refreshToc(canvas: Canvas): void {
-		for (const leaf of this.app.workspace.getLeavesOfType(TOC_VIEW_TYPE)) {
+	private refreshOutline(canvas: Canvas): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(OUTLINE_VIEW_TYPE)) {
 			const view = leaf.view;
-			if (view instanceof TocView) view.refresh(canvas);
+			if (view instanceof OutlineView) {
+				view.zoomPadding = this.settings.navigationZoomPadding;
+				view.onForestLayout = (c, groupId) => {
+					this.layoutEngine.layoutForest(c, groupId);
+					this.updateGroupBounds(c);
+				};
+				view.refresh(canvas);
+			}
 		}
 	}
 
@@ -633,11 +903,52 @@ export default class CanvasMindMapPlugin extends Plugin {
 		if (changed) canvas.requestSave();
 	}
 
-	private clearToc(): void {
-		for (const leaf of this.app.workspace.getLeavesOfType(TOC_VIEW_TYPE)) {
-			const view = leaf.view;
-			if (view instanceof TocView) view.clear();
+	private finishInsertNode(canvas: Canvas, newNode: CanvasNode, nearNode: CanvasNode): void {
+		const forest = buildForest(canvas);
+		const treeNode = findTreeForNode(forest, nearNode.id);
+		if (treeNode) {
+			let root = treeNode;
+			while (root.parent) root = root.parent;
+			this.layoutEngine.layoutChildren(canvas, root.canvasNode.id);
 		}
+		if (this.settings.autoColor && this.isMindmapCanvas(canvas)) {
+			this.branchColors.applyColors(canvas);
+		}
+		this.updateGroupBounds(canvas);
+		this.canvasApi.selectAndEdit(canvas, newNode, this.settings.navigationZoomPadding);
+	}
+
+	private showOutline(canvas: Canvas): void {
+		const leaves = this.app.workspace.getLeavesOfType(OUTLINE_VIEW_TYPE);
+		if (leaves.length > 0) {
+			this.refreshOutline(canvas);
+			return;
+		}
+		const leaf = this.app.workspace.getRightLeaf(false);
+		if (!leaf) return;
+		void leaf.setViewState({ type: OUTLINE_VIEW_TYPE }).then(() => {
+			this.app.workspace.revealLeaf(leaf);
+			this.reorderOutlineToTop(leaf);
+			this.refreshOutline(canvas);
+		});
+	}
+
+	private hideOutline(): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(OUTLINE_VIEW_TYPE)) {
+			leaf.detach();
+		}
+	}
+
+	private reorderOutlineToTop(leaf: WorkspaceLeaf): void {
+		const parent = leaf.parent;
+		if (!parent?.children) return;
+		const children = parent.children;
+		const idx = children.indexOf(leaf);
+		if (idx > 0) {
+			children.splice(idx, 1);
+			children.unshift(leaf);
+		}
+		parent.selectTab?.(leaf);
 	}
 
 	/**
@@ -720,6 +1031,12 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.branchColors.applyColors(canvas);
 		}
 
+		if (newValue) {
+			this.showOutline(canvas);
+		} else {
+			this.hideOutline();
+		}
+
 		this.updateToggleButton(canvas);
 	}
 
@@ -792,6 +1109,12 @@ export default class CanvasMindMapPlugin extends Plugin {
 			}
 			if (this.origCanvasMethods.createGroupNode) {
 				this.interceptedCanvas.createGroupNode = this.origCanvasMethods.createGroupNode;
+			}
+			if (this.origCanvasMethods.undo) {
+				this.interceptedCanvas.undo = this.origCanvasMethods.undo;
+			}
+			if (this.origCanvasMethods.redo) {
+				this.interceptedCanvas.redo = this.origCanvasMethods.redo;
 			}
 		}
 		this.interceptedCanvas = null;

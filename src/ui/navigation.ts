@@ -9,6 +9,27 @@ export class Navigation {
 	constructor(private canvasApi: CanvasAPI) {}
 
 	/**
+	 * Select the entire tree (root + all descendants) that a node belongs to.
+	 * Triggered by Alt+click on a node.
+	 */
+	selectTree(canvas: Canvas, node: CanvasNode): void {
+		const forest = buildForest(canvas);
+		if (forest.length === 0) return;
+		const treeNode = findTreeForNode(forest, node.id);
+		if (!treeNode) return;
+
+		let root = treeNode;
+		while (root.parent) root = root.parent;
+
+		const allNodes = [root, ...getDescendants(root)];
+		canvas.deselectAll();
+		for (const n of allNodes) {
+			canvas.selection.add(n.canvasNode);
+		}
+		canvas.requestFrame();
+	}
+
+	/**
 	 * Zoom to fit an entire branch (node + all descendants).
 	 * Triggered by Ctrl+click on a node.
 	 */
@@ -52,19 +73,22 @@ export class Navigation {
 	 */
 	registerClickHandler(canvas: Canvas): (() => void) | null {
 		const handler = (e: MouseEvent) => {
-			if (!e.ctrlKey && !e.metaKey) return;
+			if (!e.ctrlKey && !e.metaKey && !e.altKey) return;
 
-			// Find which node was clicked
 			const target = e.target as HTMLElement;
+			if (target.closest(".canvas-node-connection-point")) return;
 			const nodeEl = target.closest(".canvas-node") as HTMLElement;
 			if (!nodeEl) return;
 
-			// Find the canvas node by matching DOM element
 			for (const node of canvas.nodes.values()) {
 				if (node.nodeEl === nodeEl) {
 					e.preventDefault();
 					e.stopPropagation();
-					this.zoomToBranch(canvas, node);
+					if (e.altKey) {
+						this.selectTree(canvas, node);
+					} else {
+						this.zoomToBranch(canvas, node);
+					}
 					break;
 				}
 			}

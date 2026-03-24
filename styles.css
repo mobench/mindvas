@@ -25,30 +25,117 @@
 	            height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Table of Contents sidebar panel */
-.mindvas-toc {
-	padding: 4px 0;
+/* Map outline sidebar panel */
+.mindvas-outline {
+	padding: 0;
 }
 
-.mindvas-toc-group .tree-item-inner {
+.mindvas-outline-group .tree-item-inner {
 	font-weight: var(--font-semibold);
+	display: flex;
+	align-items: baseline;
 }
 
-.mindvas-toc .tree-item-children {
+/* Inline rename editing state */
+.mindvas-outline-group .tree-item-inner span[contenteditable="true"] {
+	outline: 1px solid var(--interactive-accent);
+	border-radius: var(--radius-s);
+	padding: 0 4px;
+}
+
+.mindvas-outline-group-count {
+	color: var(--text-faint);
+	font-weight: normal;
+	font-size: var(--font-ui-smaller);
+	margin-inline-start: auto;
+	padding-inline-start: 6px;
+}
+
+.mindvas-outline .tree-item-children {
 	overflow: hidden;
-	max-height: 500px;
-	transition: max-height 0.25s ease-in-out;
 }
 
-.mindvas-toc .tree-item.is-collapsed > .tree-item-children {
-	max-height: 0;
+.mindvas-outline .tree-item.is-collapsed > .tree-item-children {
+	display: none;
 }
 
-.mindvas-toc .mindvas-toc-item.is-selected {
+.mindvas-outline .mindvas-outline-item .tree-item-inner {
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+	width: 0;
+	flex: 1;
+}
+
+.mindvas-outline .mindvas-outline-item.is-active {
+	background-color: var(--background-modifier-hover);
+	border-radius: var(--radius-s);
+}
+
+.mindvas-outline .mindvas-outline-item.is-selected {
 	background-color: var(--background-modifier-active-hover);
 }
 
-.mindvas-toc-empty {
+.mindvas-outline .collapse-icon svg {
+	transition: transform 100ms ease-in-out;
+	transform: rotate(-90deg);
+}
+
+.mindvas-outline .tree-item:not(.is-collapsed) > .tree-item-self .collapse-icon svg {
+	transform: rotate(0deg);
+}
+
+/* Drag handle on TOC root items — shown on hover */
+.mindvas-outline .mindvas-outline-drag-handle {
+	cursor: grab;
+	color: var(--text-faint);
+	flex-shrink: 0;
+	opacity: 0;
+	transition: opacity 150ms ease-in-out;
+}
+
+.mindvas-outline .mindvas-outline-item:hover .mindvas-outline-drag-handle {
+	opacity: 1;
+}
+
+.mindvas-outline .mindvas-outline-drag-handle:hover {
+	color: var(--text-muted);
+}
+
+/* Dragging state */
+.mindvas-outline-item.is-dragging {
+	opacity: 0.4;
+}
+
+/* Drop target highlight */
+.mindvas-outline-group.is-drag-over,
+.mindvas-outline-ungrouped-zone.is-drag-over {
+	background-color: var(--background-modifier-hover);
+	border-radius: var(--radius-s);
+}
+
+/* Ungrouped zone drop target */
+.mindvas-outline-ungrouped-zone {
+	min-height: 20px;
+}
+
+/* Separator between ungrouped roots and groups */
+.mindvas-outline-ungrouped-zone:not(:empty):has(~ .tree-item) {
+	padding-bottom: 4px;
+	margin-bottom: 4px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Search filter */
+.mindvas-outline-search-container {
+	padding: 4px 10px 8px;
+}
+
+.mindvas-outline .tree-item.is-hidden {
+	display: none;
+}
+
+.mindvas-outline-empty {
 	padding: 12px 10px;
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
