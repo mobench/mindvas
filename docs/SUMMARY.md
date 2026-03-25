@@ -17,12 +17,12 @@
 * [Subtree operations](features/subtree-operations.md)
 * [FreeMind import](features/freemind-import.md)
 
+## Guides
+
+* [Tips and tricks](tips-and-tricks.md)
+
 ## Reference
 
 * [Commands](reference/commands.md)
 * [Mouse actions](reference/mouse-actions.md)
 * [Settings](reference/settings.md)
-
-## Guides
-
-* [Tips and tricks](tips-and-tricks.md)

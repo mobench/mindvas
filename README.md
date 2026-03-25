@@ -4,7 +4,7 @@
 
 **Transform Obsidian Canvas into a powerful mind mapping tool.**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE/) [![Version](https://img.shields.io/github/v/release/mobench/canvas-mindmap)](https://github.com/mobench/canvas-mindmap/releases) [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0+-purple.svg)](https://obsidian.md) [![Docs](https://img.shields.io/badge/docs-GitBook-blue.svg)](https://mindvas.gitbook.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE/) [![Version](https://img.shields.io/github/v/release/mobench/canvas-mindmap)](https://github.com/mobench/canvas-mindmap/releases) [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0+-purple.svg)](https://obsidian.md) [![Docs](https://img.shields.io/badge/docs-GitBook-blue.svg)](https://simbench.gitbook.io/mindvas/)
 
 ***
 
@@ -102,7 +102,7 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). Assign your 
 
 ### Documentation
 
-Full documentation is available at [**mindvas.gitbook.io**](https://mindvas.gitbook.io).
+Full documentation is available at [**mindvas.gitbook.io**](https://simbench.gitbook.io/mindvas/).
 
 ### Contributing
 
