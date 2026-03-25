@@ -1,5 +1,7 @@
 ---
-description: Create clickable links to nodes that work across canvases and from markdown notes.
+description: >-
+  Create clickable links to nodes that work across canvases and from markdown
+  notes.
 ---
 
 # Node referencing
@@ -10,19 +12,19 @@ Copy a link to any node or group and paste it anywhere in your vault. Clicking t
 
 {% stepper %}
 {% step %}
-## Copy the link
+### Copy the link
 
 Right-click a node on the canvas and choose **Copy node link**. The link is copied to your clipboard as a markdown link.
 {% endstep %}
 
 {% step %}
-## Paste it
+### Paste it
 
 Paste the link into any node's text, or into a markdown note. It appears as a clickable link showing the node's title.
 {% endstep %}
 
 {% step %}
-## Click to navigate
+### Click to navigate
 
 Click the link (node must be focused, not in edit mode). Obsidian opens the target canvas and zooms to the node.
 {% endstep %}

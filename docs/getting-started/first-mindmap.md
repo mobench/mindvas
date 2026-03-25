@@ -6,25 +6,25 @@ description: Create your first mind map on Obsidian Canvas.
 
 {% stepper %}
 {% step %}
-## Create a canvas
+### Create a canvas
 
 Right-click in the file explorer and choose **New canvas**, or use the command palette.
 {% endstep %}
 
 {% step %}
-## Enable mindmap mode
+### Enable mindmap mode
 
 Click the brain icon in the canvas toolbar to toggle mindmap mode on. The **Map outline** panel appears in the right sidebar.
 {% endstep %}
 
 {% step %}
-## Create a root node
+### Create a root node
 
 Double-click the canvas to create a text node. This is your root node — the central idea of your map.
 {% endstep %}
 
 {% step %}
-## Add child nodes
+### Add child nodes
 
 Select the root node and run **Add child node** from the command palette. A new node appears connected by an edge. The layout engine positions it automatically.
 
@@ -34,13 +34,13 @@ Assign a hotkey to "Add child node" in **Settings > Hotkeys** for faster workflo
 {% endstep %}
 
 {% step %}
-## Add siblings
+### Add siblings
 
 Select a child node and run **Add sibling node** to create a node at the same level. Siblings appear below the selected node.
 {% endstep %}
 
 {% step %}
-## Navigate your map
+### Navigate your map
 
 Use the **Map outline** panel on the right to see all your root nodes organized by groups. Click any entry to zoom to it on the canvas.
 
@@ -48,7 +48,7 @@ You can also use spatial navigation commands to move between nodes directionally
 {% endstep %}
 
 {% step %}
-## Organize with groups
+### Organize with groups
 
 Select multiple nodes on the canvas, right-click, and choose **Create group** to visually organize your trees. Groups appear as sections in the Map outline panel.
 {% endstep %}
