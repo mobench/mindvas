@@ -4,7 +4,7 @@
 
 **Transform Obsidian Canvas into a powerful mind mapping tool.**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE/) [![Version](https://img.shields.io/github/v/release/mobench/canvas-mindmap)](https://github.com/mobench/canvas-mindmap/releases) [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0+-purple.svg)](https://obsidian.md) [![Docs](https://img.shields.io/badge/docs-GitBook-blue.svg)](https://simbench.gitbook.io/mindvas/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE/) [![Version](https://img.shields.io/github/v/release/mobench/mindvas)](https://github.com/mobench/mindvas/releases) [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0+-purple.svg)](https://obsidian.md) [![Docs](https://img.shields.io/badge/docs-GitBook-blue.svg)](https://simbench.gitbook.io/mindvas/)
 
 ***
 
@@ -43,7 +43,7 @@
 
 <summary>Manual installation</summary>
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/mobench/canvas-mindmap/releases/latest)
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/mobench/mindvas/releases/latest)
 2. Create a folder `mindvas` in your vault's `.obsidian/plugins/` directory
 3. Copy the downloaded files into that folder
 4. Enable the plugin in **Settings > Community plugins**
@@ -106,7 +106,7 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). Assign your 
 
 ### 🤝 Contributing
 
-Found a bug or have a feature request? [Open an issue](https://github.com/mobench/canvas-mindmap/issues).
+Found a bug or have a feature request? [Open an issue](https://github.com/mobench/mindvas/issues).
 
 ### 💜 Support
 
