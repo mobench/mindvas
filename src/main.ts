@@ -1,4 +1,4 @@
-import { Plugin, Notice, TFile, TFolder, Menu, debounce, WorkspaceLeaf, setIcon } from "obsidian";
+import { Plugin, Notice, TFile, TFolder, Menu, debounce, WorkspaceLeaf, setIcon, ItemView } from "obsidian";
 import type { Canvas, CanvasNode, CanvasEdge, CreateNodeOptions } from "./types/canvas-internal";
 import { CanvasAPI } from "./canvas/canvas-api";
 import { NodeOperations } from "./mindmap/node-operations";
@@ -242,8 +242,8 @@ export default class CanvasMindMapPlugin extends Plugin {
 
 		// Show outline if a mindmap canvas is already open on startup
 		this.app.workspace.onLayoutReady(() => {
-			const leaf = this.app.workspace.activeLeaf;
-			if (leaf) this.onLeafChange(leaf);
+			const view = this.app.workspace.getActiveViewOfType(ItemView);
+			if (view) this.onLeafChange(view.leaf);
 		});
 
 		// Import FreeMind: right-click context menu on folders
@@ -271,7 +271,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 						.onClick(() => {
 							const title = getRootTitle(node.text);
 							const canvasPath = node.canvas.view.file.path;
-							navigator.clipboard.writeText(`[${title}](obsidian://mindvas-navigate?canvas=${encodeURIComponent(canvasPath)}&id=${node.id})`);
+							void navigator.clipboard.writeText(`[${title}](obsidian://mindvas-navigate?canvas=${encodeURIComponent(canvasPath)}&id=${node.id})`);
 							new Notice("Node link copied");
 						});
 				});
@@ -927,7 +927,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 		const leaf = this.app.workspace.getRightLeaf(false);
 		if (!leaf) return;
 		void leaf.setViewState({ type: OUTLINE_VIEW_TYPE }).then(() => {
-			this.app.workspace.revealLeaf(leaf);
+			void this.app.workspace.revealLeaf(leaf);
 			this.reorderOutlineToTop(leaf);
 			this.refreshOutline(canvas);
 		});

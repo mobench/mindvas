@@ -8,7 +8,7 @@
 
 ***
 
-### Features
+### ✨ Features
 
 * **Keyboard-driven editing** — Add, delete, and navigate nodes entirely from the keyboard
 * **Auto-layout** — Contour-based tree layout packs nodes tightly with left/right branch support
@@ -22,7 +22,7 @@
 * **FreeMind import** — Import `.mm` files directly into Canvas
 * **Non-Latin keyboard support** — Physical key fallback for Arabic, Hebrew, Cyrillic, and other layouts
 
-### Quick Start
+### 🚀 Quick Start
 
 1. Install the plugin and open any Canvas
 2. Click the brain icon in the canvas toolbar to enable mindmap mode
@@ -31,7 +31,7 @@
 5. Assign your own hotkeys in **Settings > Hotkeys** for faster workflow
 6. The Map outline panel appears in the right sidebar for navigation
 
-### Installation
+### 📦 Installation
 
 #### Community Plugins
 
@@ -50,7 +50,7 @@
 
 </details>
 
-### Commands
+### ⌨️ Commands
 
 All commands are available from the command palette (`Ctrl/Cmd+P`). Assign your own hotkeys in **Settings > Hotkeys**.
 
@@ -72,7 +72,7 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). Assign your 
 | Toggle mindmap mode             | Enable or disable mindmap mode for the current canvas             |
 | Import FreeMind file            | Import a `.mm` mind map file into the current canvas              |
 
-### Mouse Actions
+### 🖱️ Mouse Actions
 
 | Action                     | Result                                        |
 | -------------------------- | --------------------------------------------- |
@@ -100,19 +100,19 @@ All commands are available from the command palette (`Ctrl/Cmd+P`). Assign your 
 
 </details>
 
-### Documentation
+### 📖 Documentation
 
-Full documentation is available at [**mindvas.gitbook.io**](https://simbench.gitbook.io/mindvas/).
+[**Find the documentation here.**](https://simbench.gitbook.io/mindvas/)
 
-### Contributing
+### 🤝 Contributing
 
 Found a bug or have a feature request? [Open an issue](https://github.com/mobench/canvas-mindmap/issues).
 
-### Support
+### 💜 Support
 
 If you find this plugin useful, consider [buying me a coffee](https://buymeacoffee.com/mobench).
 
-### License
+### 📄 License
 
 [MIT](LICENSE/)
 
