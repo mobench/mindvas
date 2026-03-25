@@ -1,6 +1,6 @@
 # README
 
-![Mindvas Banner](.gitbook/assets/banner.png)
+![Mindvas Banner](assets/banner.png)
 
 **Transform Obsidian Canvas into a powerful mind mapping tool.**
 
