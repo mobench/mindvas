@@ -6,7 +6,7 @@ description: Power user tips for getting the most out of Mindvas.
 
 ## Quick actions
 
-* **Alt+click a connection point** — [insert a node](../features/insert-between.md) between parent and child
+* **Alt+click a connection point** — [insert a node](features/insert-between.md) between parent and child
 * **Alt+click a node** — select the entire tree
 * **Ctrl+click a node** — zoom to fit the branch
 * **Double-click a group name** in the outline — rename it inline
@@ -16,7 +16,7 @@ description: Power user tips for getting the most out of Mindvas.
 
 * Use canvas groups to organize related trees into forests
 * Right-click a group > **Layout forest** to auto-arrange trees in a grid
-* Drag trees between groups in the [Map outline](../features/map-outline.md) panel
+* Drag trees between groups in the [Map outline](features/map-outline.md) panel
 * Select multiple ungrouped roots (Ctrl+click) then right-click > **Create group**
 
 ## Node referencing workflow
@@ -25,7 +25,7 @@ description: Power user tips for getting the most out of Mindvas.
 2. Paste into a summary note or another canvas
 3. Click the link anytime to jump back to that node
 
-This creates a web of navigable references across your vault. See [Node referencing](../features/node-referencing.md) for details.
+This creates a web of navigable references across your vault. See [Node referencing](features/node-referencing.md) for details.
 
 ## Splitting nodes
 
@@ -33,11 +33,11 @@ When a node has too much text, select part of it and run **Add child node**. The
 
 ## Detaching branches
 
-Select a child node and run **Detach subtree** from the command palette. The branch becomes an independent tree. See [Subtree operations](../features/subtree-operations.md).
+Select a child node and run **Detach subtree** from the command palette. The branch becomes an independent tree. See [Subtree operations](features/subtree-operations.md).
 
 ## Balanced layouts
 
-Select a root node with many children and run **Toggle balanced layout** to distribute children evenly on both sides. Run it again to collapse back to one side. See [Branch management](../features/branch-management.md).
+Select a root node with many children and run **Toggle balanced layout** to distribute children evenly on both sides. Run it again to collapse back to one side. See [Branch management](features/branch-management.md).
 
 ## Forest layout tuning
 
