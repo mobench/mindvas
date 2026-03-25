@@ -4,3 +4,4 @@ main.js
 data.json
 src/**/*.js
 .claude/
+CLAUDE.md

@@ -1,6 +1,6 @@
 # Table of contents
 
-* [Mindvas](./)
+* [Mindvas](README.md)
 
 ## Getting Started
 
@@ -25,5 +25,4 @@
 
 ## Guides
 
-* [Working with RTL content](/broken/pages/T0FxqT2PDsBShPB5TUm4)
 * [Tips and tricks](tips-and-tricks.md)
