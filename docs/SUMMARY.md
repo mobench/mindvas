@@ -10,11 +10,18 @@
 ## Features
 
 * [Map outline](features/map-outline.md)
-* [Keyboard shortcuts](features/keyboard-shortcuts.md)
 * [Node referencing](features/node-referencing.md)
 * [Insert node between](features/insert-between.md)
 * [Forest layout](features/forest-layout.md)
+* [Branch management](features/branch-management.md)
+* [Subtree operations](features/subtree-operations.md)
 * [FreeMind import](features/freemind-import.md)
+
+## Reference
+
+* [Commands](reference/commands.md)
+* [Mouse actions](reference/mouse-actions.md)
+* [Settings](reference/settings.md)
 
 ## Guides
 

@@ -6,30 +6,55 @@ description: A sidebar panel showing your mind map structure with search, groups
 
 The Map outline panel appears in the right sidebar when mindmap mode is active. It shows all root nodes organized by canvas groups.
 
-## Features
+## Toolbar
 
-* **Group headers** with node count badges and collapse/expand
-* **Search filter** to quickly find nodes by name
-* **Bidirectional highlight** — click a node in the outline to zoom to it on canvas, click a node on canvas to highlight it in the outline
-* **Drag and drop** — drag root nodes between groups or out of groups
-* **Group rename** — double-click a group name or right-click > "Rename group"
-* **Text truncation** — long titles show with ellipsis, markdown links display as clean text
+The toolbar at the top of the panel has two buttons:
 
-## Navigation
+* **Search** — toggle a text filter to find nodes and groups by name
+* **Collapse/Expand all** — toggle all groups collapsed or expanded
 
-| Action | Result |
-| --- | --- |
-| Click a node | Zooms to node on canvas, highlights in outline |
-| Click a node on canvas | Highlights corresponding entry in outline |
-| Click empty canvas | Clears outline highlight |
-| Ctrl+click ungrouped roots | Multi-select for grouping |
-| Right-click ungrouped selection | Create group from selection |
+## Root nodes
+
+Each root node appears as a row in the panel. Long titles are truncated with an ellipsis. Markdown links in titles display as clean text (e.g., `[My Link](url)` shows as "My Link").
+
+**Click** a root node to select it on the canvas and zoom to it. The clicked node stays highlighted — this is the **active node highlight**.
+
+**Bidirectional sync** — clicking a root node on the canvas also highlights it in the outline. Clicking empty canvas or pressing Escape clears the highlight.
 
 ## Groups
 
-Groups in the outline match canvas groups. They are sorted by their position on the canvas (top-left to bottom-right).
+Groups match canvas groups and are sorted by their position on the canvas (top-left to bottom-right). Each group header shows:
 
-* **Collapse/expand** — click the group header
-* **Collapse all / expand all** — use the toolbar button
-* **Rename** — double-click the group name, edit, click away to save. Press Escape to cancel.
-* **Layout forest** — right-click a group > "Layout forest" to auto-arrange trees within the group
+* Group name
+* Node count badge
+* Collapse chevron
+
+### Group actions
+
+| Action | Result |
+| --- | --- |
+| Click group header | Toggle collapse/expand |
+| Double-click group name | Rename inline (click away to save, Escape to cancel) |
+| Right-click group header | Context menu: Rename group, Layout forest |
+
+## Drag and drop
+
+Each root node has a **grip handle** that appears on hover. Drag it to:
+
+* Move a tree from ungrouped area into a group
+* Move a tree between groups
+* Drag a tree out of a group to the ungrouped area
+
+When you drop a tree into a group, the entire subtree moves together (preserving left/right arrangement) and forest layout runs automatically.
+
+## Multi-select and grouping
+
+**Ctrl+click** ungrouped root nodes to multi-select them. Then right-click and choose **Create group** to wrap them in a new canvas group. The group is created around all selected trees and enters edit mode for naming.
+
+## Search
+
+Click the search icon to show a filter input. Type to filter root nodes and groups by name. Groups are shown if the group name or any child root matches the search query.
+
+{% hint style="info" %}
+See also: [Commands reference](../reference/commands.md) for the full list of keyboard commands.
+{% endhint %}

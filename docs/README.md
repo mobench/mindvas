@@ -17,18 +17,22 @@ layout:
 
 # Mindvas
 
-Mindvas adds mind mapping capabilities to Obsidian Canvas. Build tree-structured mind maps with automatic layout, keyboard navigation, branch colors, and a sidebar outline panel.
+Mindvas adds mind mapping capabilities to Obsidian Canvas. Build tree-structured mind maps with automatic layout, keyboard navigation, branch colors, and a sidebar outline panel — all without leaving Canvas.
 
 ## Key features
 
-* **Automatic tree layout** — Contour-based algorithm packs nodes tightly with left/right branch support
-* **Map outline panel** — Sidebar showing all root nodes grouped by canvas groups, with search, collapse, and drag-and-drop
-* **Keyboard navigation** — Navigate between nodes, add children/siblings, delete, and flip branches with shortcuts
-* **Node referencing** — Copy clickable links to any node, paste in notes or other canvases for instant navigation
+* **Auto-layout** — Contour-based algorithm packs nodes tightly with left/right branch support
+* **Map outline** — Sidebar panel with groups, search, drag-and-drop, rename, and bidirectional highlight sync
+* **Keyboard-driven** — Add children, siblings, delete, navigate, and flip branches from the keyboard
+* **Node referencing** — Copy clickable links to any node; works across canvases and from markdown notes
 * **Insert between nodes** — Alt+click a connection point to insert a new node in the middle of an edge
 * **Forest layout** — Arrange multiple trees within a group into a clean grid
-* **Branch colors** — Automatic color-coding by branch
-* **FreeMind import** — Import `.mm` mind map files into canvas
+* **Branch colors** — Automatic color-coding by top-level branch
+* **Subtree drag** — Drag a node to move its entire subtree; Alt+drag to move a single node
+* **Auto-resize** — Nodes grow and shrink to fit their content
+* **Balanced layout** — Distribute children on both sides of the root
+* **FreeMind import** — Import `.mm` mind map files into Canvas
+* **RTL support** — Full support for Arabic, Hebrew, and other right-to-left languages
 
 <table data-view="cards">
     <thead>
@@ -43,12 +47,12 @@ Mindvas adds mind mapping capabilities to Obsidian Canvas. Build tree-structured
             <td><a href="getting-started/installation.md">Installation</a></td>
         </tr>
         <tr>
-            <td>Explore features</td>
-            <td><a href="features/map-outline.md">Map outline</a></td>
+            <td>All commands</td>
+            <td><a href="reference/commands.md">Commands reference</a></td>
         </tr>
         <tr>
-            <td>Keyboard shortcuts</td>
-            <td><a href="features/keyboard-shortcuts.md">Shortcuts</a></td>
+            <td>Mouse actions</td>
+            <td><a href="reference/mouse-actions.md">Mouse actions reference</a></td>
         </tr>
     </tbody>
 </table>
