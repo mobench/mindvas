@@ -654,7 +654,10 @@ export class OutlineView extends ItemView {
 
 		const onKeydown = (e: KeyboardEvent) => {
 			e.stopPropagation();
-			if (e.key === "Escape") {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				commit();
+			} else if (e.key === "Escape") {
 				e.preventDefault();
 				cancel();
 			}
