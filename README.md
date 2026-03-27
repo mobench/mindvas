@@ -110,7 +110,7 @@ Found a bug or have a feature request? [Open an issue](https://github.com/mobenc
 
 ### 💜 Support
 
-If you find this plugin useful, consider [buying me a coffee](https://buymeacoffee.com/mobench).
+If you find this plugin useful, you can support me [here](https://buymeacoffee.com/mobench) 😊.
 
 ### 📄 License
 
