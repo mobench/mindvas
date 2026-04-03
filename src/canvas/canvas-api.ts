@@ -250,9 +250,6 @@ export class CanvasAPI {
 	}
 
 	/**
-	 * Select a node and start editing it.
-	 */
-	/**
 	 * Select a node and zoom to it with padding.
 	 */
 	selectAndZoom(canvas: Canvas, node: CanvasNode, zoomPadding: number): void {

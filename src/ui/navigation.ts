@@ -40,9 +40,7 @@ export class Navigation {
 		const treeNode = findTreeForNode(forest, node.id);
 		if (!treeNode) return;
 
-		const descendants = getDescendants(treeNode);
-		const allNodes = [treeNode, ...descendants];
-		if (allNodes.length === 0) return;
+		const allNodes = [treeNode, ...getDescendants(treeNode)];
 
 		// Calculate bounding box
 		let minX = Infinity,

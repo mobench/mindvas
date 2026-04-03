@@ -52,6 +52,23 @@ export class KeyboardHandler {
 			},
 		});
 
+		// Ctrl+S → Save and exit edit mode
+		this.plugin.addCommand({
+			id: "mindmap-save-node",
+			name: "Save and exit edit mode",
+			checkCallback: (checking: boolean) => {
+				const canvas = this.canvasApi.getActiveCanvas();
+				if (!canvas) return false;
+				const node = this.canvasApi.getSelectedNode(canvas);
+				if (!node) return false;
+				if (!node.isEditing) return false;
+				if (checking) return true;
+
+				this.onBeforeLeaveNode?.();
+				node.blur();
+			},
+		});
+
 		// Ctrl+> → Create child node
 		this.plugin.addCommand({
 			id: "mindmap-add-child",
@@ -361,6 +378,7 @@ export class KeyboardHandler {
 	private registerPhysicalKeyShortcuts(): void {
 		const shortcuts = [
 			{ code: "Period", key: ".", ctrl: true, shift: false, alt: false, cmdId: "mindvas:mindmap-add-child" },
+			{ code: "KeyS", key: "s", ctrl: true, shift: false, alt: false, cmdId: "mindvas:mindmap-save-node" },
 			{ code: "KeyS", key: "s", ctrl: true, shift: true, alt: false, cmdId: "mindvas:mindmap-flip-branch" },
 			{ code: "KeyD", key: "d", ctrl: true, shift: true, alt: false, cmdId: "mindvas:mindmap-toggle-balance" },
 			{ code: "KeyL", key: "l", ctrl: true, shift: true, alt: false, cmdId: "mindvas:mindmap-resize-subtree" },

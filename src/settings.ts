@@ -11,6 +11,7 @@ export interface MindMapSettings {
 	maxNodeHeight: number;
 	defaultMindmapMode: boolean;
 	navigationZoomPadding: number;
+	mouseNavigation: boolean;
 }
 
 export const DEFAULT_SETTINGS: MindMapSettings = {
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: MindMapSettings = {
 	maxNodeHeight: 300,
 	defaultMindmapMode: true,
 	navigationZoomPadding: 200,
+	mouseNavigation: false,
 };
 
 export class MindMapSettingTab extends PluginSettingTab {
@@ -149,6 +151,18 @@ export class MindMapSettingTab extends PluginSettingTab {
 							this.plugin.settings.maxNodeHeight = num;
 							debouncedSave();
 						}
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Mouse back/forward navigation")
+			.setDesc("Use mouse back/forward buttons for in-canvas navigation instead of Obsidian's default note navigation")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.mouseNavigation)
+					.onChange(async (value) => {
+						this.plugin.settings.mouseNavigation = value;
+						await this.plugin.saveSettings();
 					})
 			);
 

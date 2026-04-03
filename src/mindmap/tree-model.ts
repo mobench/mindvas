@@ -86,7 +86,8 @@ export function buildForest(canvas: Canvas): TreeNode[] {
 
 /**
  * Collect the set of group node IDs from the serialized canvas data.
- * Runtime nodes lack `.type`, so this reads from getData().
+ * Runtime CanvasNode objects lack `.type` despite the type declaration —
+ * must read from getData() which returns the serialized JSON.
  */
 export function getGroupIds(canvas: Canvas): Set<string> {
 	const ids = new Set<string>();
@@ -153,17 +154,6 @@ export function getDescendants(node: TreeNode): TreeNode[] {
 }
 
 /**
- * Count total descendants.
- */
-export function countDescendants(node: TreeNode): number {
-	let count = 0;
-	for (const child of node.children) {
-		count += 1 + countDescendants(child);
-	}
-	return count;
-}
-
-/**
  * Get the next sibling, or null if last.
  */
 export function getNextSibling(node: TreeNode): TreeNode | null {
@@ -181,13 +171,6 @@ export function getPrevSibling(node: TreeNode): TreeNode | null {
 	const siblings = node.parent.children;
 	const idx = siblings.indexOf(node);
 	return idx > 0 ? siblings[idx - 1] : null;
-}
-
-/**
- * Get the first child, or null if leaf.
- */
-export function getFirstChild(node: TreeNode): TreeNode | null {
-	return node.children.length > 0 ? node.children[0] : null;
 }
 
 /**

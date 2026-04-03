@@ -6,8 +6,7 @@ import { getGroupIds } from "../mindmap/tree-model";
  * Identify "stranger" nodes inside a group — nodes whose parent is outside the group,
  * plus their descendants that are also inside the group.
  */
-function identifyStrangers(canvas: Canvas, canvasApi: CanvasAPI, group: CanvasNode): CanvasNode[] {
-	const groupIds = getGroupIds(canvas);
+function identifyStrangers(canvas: Canvas, canvasApi: CanvasAPI, group: CanvasNode, groupIds: Set<string>): CanvasNode[] {
 
 	// Find all non-group nodes whose center is inside the group bounds
 	const gx = group.x;
@@ -72,9 +71,10 @@ export function registerGroupDragHandler(canvas: Canvas, canvasApi: CanvasAPI): 
 		if (!node) return;
 
 		// Check if the clicked node is a group
-		if (!getGroupIds(canvas).has(node.id)) return;
+		const groupIds = getGroupIds(canvas);
+		if (!groupIds.has(node.id)) return;
 
-		const strangers = identifyStrangers(canvas, canvasApi, node);
+		const strangers = identifyStrangers(canvas, canvasApi, node, groupIds);
 		for (const stranger of strangers) {
 			frozenNodes.push(stranger);
 			stranger.moveTo = () => {};

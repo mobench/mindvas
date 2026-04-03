@@ -16,7 +16,7 @@ import { registerDragEndHandler } from "./canvas/edge-updater";
 import { registerSubtreeDragHandler } from "./canvas/subtree-drag";
 import { registerGroupDragHandler } from "./canvas/group-drag";
 import { registerAutoResize, AutoResizeHandle, getEditorElements } from "./ui/auto-resize";
-import { OutlineView, OUTLINE_VIEW_TYPE, getRootTitle } from "./ui/outline-view";
+import { OutlineView, OUTLINE_VIEW_TYPE } from "./ui/outline-view";
 import { freemindToCanvas } from "./import/freemind-import";
 import { getGroupIds, buildForest, findTreeForNode } from "./mindmap/tree-model";
 
@@ -50,9 +50,16 @@ export default class CanvasMindMapPlugin extends Plugin {
 		createGroupNode?: (options: CreateNodeOptions & { label?: string }) => import("./types/canvas-internal").CanvasNode;
 		undo?: () => void;
 		redo?: () => void;
+		selectOnly?: (item: CanvasNode | CanvasEdge) => void;
 	} = {};
 	/** Set to true on unload to prevent deferred callbacks from running. */
 	private unloaded = false;
+	/** Navigation history for back/forward. */
+	private navHistory: string[] = [];
+	private navHistoryIndex = -1;
+	private navSkipTracking = false;
+	private lastNavCanvas: Canvas | null = null;
+	private cleanupNavHandler: (() => void) | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -269,9 +276,8 @@ export default class CanvasMindMapPlugin extends Plugin {
 					item.setTitle("Copy node link")
 						.setIcon("link")
 						.onClick(() => {
-							const title = getRootTitle(node.text);
 							const canvasPath = node.canvas.view.file.path;
-							void navigator.clipboard.writeText(`[${title}](obsidian://mindvas-navigate?canvas=${encodeURIComponent(canvasPath)}&id=${node.id})`);
+							void navigator.clipboard.writeText(`obsidian://mindvas-navigate?canvas=${encodeURIComponent(canvasPath)}&id=${node.id}`);
 							new Notice("Node link copied");
 						});
 				});
@@ -322,6 +328,28 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.canvasApi.selectAndZoom(canvas, node, this.settings.navigationZoomPadding);
 		});
 
+		// Navigation history: back/forward commands
+		this.addCommand({
+			id: "mindmap-nav-back",
+			name: "Navigate back",
+			checkCallback: (checking: boolean) => {
+				const canvas = this.canvasApi.getActiveCanvas();
+				if (!canvas || this.navHistoryIndex <= 0) return false;
+				if (checking) return true;
+				this.navigateBack(canvas);
+			},
+		});
+		this.addCommand({
+			id: "mindmap-nav-forward",
+			name: "Navigate forward",
+			checkCallback: (checking: boolean) => {
+				const canvas = this.canvasApi.getActiveCanvas();
+				if (!canvas || this.navHistoryIndex >= this.navHistory.length - 1) return false;
+				if (checking) return true;
+				this.navigateForward(canvas);
+			},
+		});
+
 		// Import FreeMind: command palette
 		this.addCommand({
 			id: "mindmap-import-freemind",
@@ -332,6 +360,38 @@ export default class CanvasMindMapPlugin extends Plugin {
 		// Settings tab
 		this.addSettingTab(new MindMapSettingTab(this.app, this));
 
+	}
+
+	private pushNavHistory(nodeId: string): void {
+		if (this.navHistory[this.navHistoryIndex] === nodeId) return;
+		this.navHistory.splice(this.navHistoryIndex + 1);
+		this.navHistory.push(nodeId);
+		if (this.navHistory.length > 50) this.navHistory.shift();
+		this.navHistoryIndex = this.navHistory.length - 1;
+	}
+
+	private navigateBack(canvas: Canvas): void {
+		if (this.navHistoryIndex <= 0) return;
+		this.keyboardHandler?.onBeforeLeaveNode?.();
+		this.navSkipTracking = true;
+		this.navHistoryIndex--;
+		const nodeId = this.navHistory[this.navHistoryIndex];
+		const node = canvas.nodes.get(nodeId);
+		if (!node) { this.navSkipTracking = false; return; }
+		this.canvasApi.selectAndZoom(canvas, node, this.settings.navigationZoomPadding);
+		this.navSkipTracking = false;
+	}
+
+	private navigateForward(canvas: Canvas): void {
+		if (this.navHistoryIndex >= this.navHistory.length - 1) return;
+		this.keyboardHandler?.onBeforeLeaveNode?.();
+		this.navSkipTracking = true;
+		this.navHistoryIndex++;
+		const nodeId = this.navHistory[this.navHistoryIndex];
+		const node = canvas.nodes.get(nodeId);
+		if (!node) { this.navSkipTracking = false; return; }
+		this.canvasApi.selectAndZoom(canvas, node, this.settings.navigationZoomPadding);
+		this.navSkipTracking = false;
 	}
 
 	onunload(): void {
@@ -368,10 +428,15 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.cleanupInsertNodeHandler();
 			this.cleanupInsertNodeHandler = null;
 		}
+		if (this.cleanupNavHandler) {
+			this.cleanupNavHandler();
+			this.cleanupNavHandler = null;
+		}
 		if (this.autoResizeHandle) {
 			this.autoResizeHandle.cleanup();
 			this.autoResizeHandle = null;
 		}
+		this.lastNavCanvas = null;
 		if (this.toggleBtnEl) {
 			this.toggleBtnEl.remove();
 			this.toggleBtnEl = null;
@@ -420,12 +485,26 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.cleanupInsertNodeHandler();
 			this.cleanupInsertNodeHandler = null;
 		}
+		if (this.cleanupNavHandler) {
+			this.cleanupNavHandler();
+			this.cleanupNavHandler = null;
+		}
 		if (this.autoResizeHandle) {
 			this.autoResizeHandle.cleanup();
 			this.autoResizeHandle = null;
 		}
 
 		const canvas = this.canvasApi.getActiveCanvas();
+
+		// Only reset nav history when switching to a different canvas
+		if (canvas && canvas !== this.lastNavCanvas) {
+			this.navHistory = [];
+			this.navHistoryIndex = -1;
+		}
+		if (canvas) {
+			this.lastNavCanvas = canvas;
+		}
+
 		if (!canvas) {
 			if (this.toggleBtnEl) {
 				this.toggleBtnEl.remove();
@@ -462,7 +541,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 
 		// Sync outline highlight when canvas selection changes (click or Escape)
 		const syncOutlineSelection = () => {
-			requestAnimationFrame(() => {
+			this.trackedRaf(() => {
 				for (const leaf of this.app.workspace.getLeavesOfType(OUTLINE_VIEW_TYPE)) {
 					if (leaf.view instanceof OutlineView) {
 						leaf.view.syncHighlightFromCanvas(canvas);
@@ -473,6 +552,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 		const onCanvasClick = () => syncOutlineSelection();
 		const onCanvasKeydown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") syncOutlineSelection();
+			if (e.key === "s" && (e.ctrlKey || e.metaKey) && !e.shiftKey) syncOutlineSelection();
 		};
 		canvas.wrapperEl.addEventListener("click", onCanvasClick);
 		canvas.wrapperEl.addEventListener("keydown", onCanvasKeydown);
@@ -602,6 +682,23 @@ export default class CanvasMindMapPlugin extends Plugin {
 				});
 			}
 		};
+		// Mouse back/forward buttons for navigation history (optional)
+		if (this.settings.mouseNavigation) {
+			const onPointerDown = (e: PointerEvent) => {
+				if (e.button === 3) {
+					e.preventDefault();
+					e.stopImmediatePropagation();
+					this.navigateBack(canvas);
+				}
+				if (e.button === 4) {
+					e.preventDefault();
+					e.stopImmediatePropagation();
+					this.navigateForward(canvas);
+				}
+			};
+			canvas.wrapperEl.addEventListener("pointerdown", onPointerDown, true);
+			this.cleanupNavHandler = () => canvas.wrapperEl.removeEventListener("pointerdown", onPointerDown, true);
+		}
 
 		// Auto-color if enabled (mindmap only)
 		if (this.settings.autoColor && this.isMindmapCanvas(canvas)) {
@@ -613,8 +710,17 @@ export default class CanvasMindMapPlugin extends Plugin {
 		const origCreateGroup = canvas.createGroupNode.bind(canvas);
 		const origUndo = canvas.undo?.bind(canvas);
 		const origRedo = canvas.redo?.bind(canvas);
-		this.origCanvasMethods = { requestSave: origSave, createGroupNode: origCreateGroup, undo: origUndo, redo: origRedo };
+		const origSelectOnly = canvas.selectOnly.bind(canvas);
+		this.origCanvasMethods = { requestSave: origSave, createGroupNode: origCreateGroup, undo: origUndo, redo: origRedo, selectOnly: origSelectOnly };
 		this.interceptedCanvas = canvas;
+
+		// Track selection changes for navigation history
+		canvas.selectOnly = (item: CanvasNode | CanvasEdge) => {
+			origSelectOnly(item);
+			if (!this.navSkipTracking && "nodeEl" in item) {
+				this.pushNavHistory(item.id);
+			}
+		};
 
 		canvas.requestSave = () => {
 			origSave();
@@ -1115,6 +1221,9 @@ export default class CanvasMindMapPlugin extends Plugin {
 			}
 			if (this.origCanvasMethods.redo) {
 				this.interceptedCanvas.redo = this.origCanvasMethods.redo;
+			}
+			if (this.origCanvasMethods.selectOnly) {
+				this.interceptedCanvas.selectOnly = this.origCanvasMethods.selectOnly;
 			}
 		}
 		this.interceptedCanvas = null;

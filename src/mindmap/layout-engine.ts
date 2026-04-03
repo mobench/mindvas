@@ -305,20 +305,21 @@ export class LayoutEngine {
 		const group = canvas.nodes.get(groupId);
 		if (!group) return;
 
-		// Layout all trees internally first
-		this.layout(canvas);
-
-		// Rebuild forest after layout (positions changed)
+		// Build forest and find roots inside this group
 		const forest = buildForest(canvas);
 		if (forest.length === 0) return;
 
-		// Find roots inside this group
 		const roots = forest.filter(root => {
 			const cx = root.canvasNode.x + root.canvasNode.width / 2;
 			const cy = root.canvasNode.y + root.canvasNode.height / 2;
 			return cx >= group.x && cx <= group.x + group.width
 				&& cy >= group.y && cy <= group.y + group.height;
 		});
+
+		// Layout only trees inside this group
+		for (const root of roots) {
+			this.layoutChildren(canvas, root.canvasNode.id);
+		}
 		if (roots.length <= 1) return;
 
 		// Compute bounding box for each tree

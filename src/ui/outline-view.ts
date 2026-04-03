@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, setIcon, Menu, SearchComponent } from "obsidian";
+import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice, SearchComponent } from "obsidian";
 import type { Canvas, CanvasNode, CanvasView as CanvasViewType } from "../types/canvas-internal";
 import { buildForest, TreeNode, getDescendants, getGroupIds } from "../mindmap/tree-model";
 
@@ -357,18 +357,33 @@ export class OutlineView extends ItemView {
 			});
 		});
 
-		if (isUngrouped) {
-			self.addEventListener("contextmenu", (e) => {
-				e.preventDefault();
-				// If right-clicked root not already selected, select only it
+		self.addEventListener("contextmenu", (e) => {
+			e.preventDefault();
+			const menu = new Menu();
+			menu.addItem((item) => {
+				item.setTitle("Copy node link")
+					.setIcon("link")
+					.onClick(() => {
+						const canvasPath = canvas.view.file.path;
+						void navigator.clipboard.writeText(`obsidian://mindvas-navigate?canvas=${encodeURIComponent(canvasPath)}&id=${root.canvasNode.id}`);
+						new Notice("Node link copied");
+					});
+			});
+			if (isUngrouped) {
 				if (!this.selectedRoots.has(root)) {
 					this.clearSelection();
 					this.selectedRoots.add(root);
 					self.addClass("is-selected");
 				}
-				this.showContextMenu(e);
-			});
-		}
+				const count = this.selectedRoots.size;
+				menu.addItem((item) => {
+					item.setTitle(`Create group (${count} root${count > 1 ? "s" : ""})`)
+						.setIcon("group")
+						.onClick(() => this.createGroupFromSelection());
+				});
+			}
+			menu.showAtMouseEvent(e);
+		});
 	}
 
 	private clearSelection(): void {
@@ -416,17 +431,7 @@ export class OutlineView extends ItemView {
 		}
 	}
 
-	private showContextMenu(e: MouseEvent): void {
-		const count = this.selectedRoots.size;
-		if (count === 0) return;
-		const menu = new Menu();
-		menu.addItem((item) => {
-			item.setTitle(`Create group (${count} root${count > 1 ? "s" : ""})`)
-				.setIcon("group")
-				.onClick(() => this.createGroupFromSelection());
-		});
-		menu.showAtMouseEvent(e);
-	}
+
 
 	private createGroupFromSelection(): void {
 		const canvas = this.lastCanvas;
@@ -607,7 +612,12 @@ export class OutlineView extends ItemView {
 			if (g) maxY = Math.max(maxY, g.y + g.height);
 		}
 		const MARGIN = 80;
+		const dx = 0;
+		const dy = (maxY + MARGIN) - root.canvasNode.y;
 		root.canvasNode.moveTo({ x: root.canvasNode.x, y: maxY + MARGIN });
+		for (const desc of getDescendants(root)) {
+			desc.canvasNode.moveTo({ x: desc.canvasNode.x + dx, y: desc.canvasNode.y + dy });
+		}
 
 		if (this.onForestLayout) {
 			this.onForestLayout(canvas, sourceGroupId);
@@ -686,6 +696,7 @@ export class OutlineView extends ItemView {
 		this.selectedRoots.clear();
 		this.groupElMap.clear();
 		this.allItemEls.clear();
+		this.collapsedGroups.clear();
 		this.activeNodeId = null;
 		this.draggedRoot = null;
 		this.dragSourceGroupId = null;
