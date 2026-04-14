@@ -1,12 +1,26 @@
-# README
+# Mindvas — Mind Mapping Plugin for Obsidian
 
-![Mindvas Banner](assets/banner.png)
+![Mindvas — mind mapping plugin for Obsidian Canvas](assets/banner.png)
 
-**Transform Obsidian Canvas into a powerful mind mapping tool.**
+**Turn Obsidian Canvas into a full-featured mind mapping tool — keyboard-driven editing, automatic tree layout, outline panel, branch coloring, and more.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE/) [![Version](https://img.shields.io/github/v/release/mobench/mindvas)](https://github.com/mobench/mindvas/releases) [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0+-purple.svg)](https://obsidian.md) [![Docs](https://img.shields.io/badge/docs-GitBook-blue.svg)](https://simbench.gitbook.io/mindvas/)
 
 ***
+
+### 🧠 What is Mindvas?
+
+Mindvas is an Obsidian plugin that transforms the built-in Canvas into a complete mind mapping tool. If you've used apps like XMind, FreeMind, or MindNode but wanted your mind maps to live inside your vault alongside your notes, Mindvas bridges that gap.
+
+Canvas gives you a great visual foundation, but it doesn't know about trees. Mindvas adds the missing layer: tree-aware keyboard shortcuts, automatic node layout, an outline sidebar, branch colors, and everything else you'd expect from a dedicated mind mapping app — stored as standard Obsidian Canvas files.
+
+### 🤔 Why Mindvas?
+
+* **Lives in your vault** — mind maps are regular `.canvas` files alongside your notes, not a separate app
+* **Keyboard-first** — add children, siblings, navigate, delete, and re-layout without touching the mouse
+* **Contour-based auto-layout** — packs nodes tightly as the map grows, with left/right branch support
+* **Outline panel** — sidebar with search, drag-and-drop, groups, and bidirectional highlight sync
+* **Runs locally** — no network requests, no telemetry, no external services
 
 ### ✨ Features
 
