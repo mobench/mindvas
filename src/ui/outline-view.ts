@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice, SearchComponent } from "obsidian";
 import type { Canvas, CanvasNode, CanvasView as CanvasViewType } from "../types/canvas-internal";
-import { buildForest, TreeNode, getDescendants, getGroupIds } from "../mindmap/tree-model";
+import { buildForest, findTreeForNode, TreeNode, getDescendants, getGroupIds } from "../mindmap/tree-model";
 
 export const OUTLINE_VIEW_TYPE = "mindvas-outline";
 
@@ -21,8 +21,9 @@ export class OutlineView extends ItemView {
 	private selectedRoots = new Set<TreeNode>();
 	private lastCanvas: Canvas | null = null;
 	private groupIds: string[] = [];
-	private draggedRoot: TreeNode | null = null;
-	private dragSourceGroupId: string | null = null;
+	private draggedRoots = new Set<TreeNode>();
+	private dragSources = new Map<TreeNode, string | null>();
+	private rootGroupMap = new Map<TreeNode, string>();
 	private activeNodeId: string | null = null;
 	private allItemEls = new Map<string, HTMLElement>();
 	private groupElMap = new Map<string, HTMLElement>();
@@ -131,6 +132,7 @@ export class OutlineView extends ItemView {
 		this.selectedRoots.clear();
 		this.groupElMap.clear();
 		this.allItemEls.clear();
+		this.rootGroupMap.clear();
 		this.lastCanvas = canvas;
 
 		// Store the canvas leaf for click navigation
@@ -194,6 +196,7 @@ export class OutlineView extends ItemView {
 
 			if (bestGroup) {
 				bestGroup.roots.push(root);
+				this.rootGroupMap.set(root, bestGroup.node.id);
 			} else {
 				ungrouped.push(root);
 			}
@@ -202,7 +205,12 @@ export class OutlineView extends ItemView {
 		// Render ungrouped roots in a drop zone (accepts trees dragged out of groups)
 		const ungroupedZone = this.contentEl.createDiv({ cls: "mindvas-outline-ungrouped-zone" });
 		ungroupedZone.addEventListener("dragover", (e) => {
-			if (!this.draggedRoot || !this.dragSourceGroupId) return;
+			if (this.draggedRoots.size === 0) return;
+			let hasGroupSource = false;
+			for (const r of this.draggedRoots) {
+				if (this.dragSources.get(r)) { hasGroupSource = true; break; }
+			}
+			if (!hasGroupSource) return;
 			e.preventDefault();
 			ungroupedZone.addClass("is-drag-over");
 		});
@@ -212,10 +220,22 @@ export class OutlineView extends ItemView {
 		ungroupedZone.addEventListener("drop", (e) => {
 			e.preventDefault();
 			ungroupedZone.removeClass("is-drag-over");
-			if (!this.draggedRoot || !this.dragSourceGroupId || !this.lastCanvas) return;
-			this.ungroupTree(this.draggedRoot, this.dragSourceGroupId);
-			this.draggedRoot = null;
-			this.dragSourceGroupId = null;
+			if (this.draggedRoots.size === 0 || !this.lastCanvas) return;
+			const sourceGroups = new Set<string>();
+			for (const root of this.draggedRoots) {
+				const src = this.dragSources.get(root);
+				if (src) {
+					this.ungroupTree(root, src);
+					sourceGroups.add(src);
+				}
+			}
+			if (this.onForestLayout) {
+				for (const gid of sourceGroups) {
+					this.onForestLayout(this.lastCanvas, gid);
+				}
+			}
+			this.draggedRoots.clear();
+			this.dragSources.clear();
 		});
 		for (const root of ungrouped) {
 			this.renderRootItem(ungroupedZone, root, canvas, true);
@@ -310,15 +330,26 @@ export class OutlineView extends ItemView {
 		self.addEventListener("dragstart", (e) => {
 			if (!dragAllowed) { e.preventDefault(); return; }
 			dragAllowed = false;
-			this.draggedRoot = root;
-			this.dragSourceGroupId = groupId ?? null;
-			self.addClass("is-dragging");
+			if (this.selectedRoots.has(root)) {
+				this.draggedRoots = new Set(this.selectedRoots);
+			} else {
+				this.clearSelection();
+				this.draggedRoots = new Set([root]);
+			}
+			this.dragSources.clear();
+			for (const r of this.draggedRoots) {
+				const el = this.allItemEls.get(r.canvasNode.id);
+				if (el) el.addClass("is-dragging");
+				this.dragSources.set(r, this.rootGroupMap.get(r) ?? null);
+			}
 			e.dataTransfer?.setData("text/plain", root.canvasNode.id);
 		});
 		self.addEventListener("dragend", () => {
-			self.removeClass("is-dragging");
-			this.draggedRoot = null;
-			this.dragSourceGroupId = null;
+			for (const r of this.draggedRoots) {
+				this.allItemEls.get(r.canvasNode.id)?.removeClass("is-dragging");
+			}
+			this.draggedRoots.clear();
+			this.dragSources.clear();
 			for (const [, el] of this.groupElMap) {
 				el.removeClass("is-drag-over");
 			}
@@ -327,7 +358,7 @@ export class OutlineView extends ItemView {
 		this.allItemEls.set(root.canvasNode.id, self);
 
 		self.addEventListener("click", (e) => {
-			if (isUngrouped && e.ctrlKey) {
+			if (e.ctrlKey) {
 				// Toggle multi-selection
 				if (this.selectedRoots.has(root)) {
 					this.selectedRoots.delete(root);
@@ -427,6 +458,16 @@ export class OutlineView extends ItemView {
 		if (this.allItemEls.has(nodeId)) {
 			this.setActiveItem(nodeId);
 		} else {
+			const forest = buildForest(canvas);
+			const treeNode = findTreeForNode(forest, nodeId);
+			if (treeNode) {
+				let root = treeNode;
+				while (root.parent) root = root.parent;
+				if (this.allItemEls.has(root.canvasNode.id)) {
+					this.setActiveItem(root.canvasNode.id);
+					return;
+				}
+			}
 			this.clearActiveItem();
 		}
 	}
@@ -502,7 +543,7 @@ export class OutlineView extends ItemView {
 		// Drop target for drag-and-drop
 		this.groupElMap.set(group.node.id, self);
 		self.addEventListener("dragover", (e) => {
-			if (!this.draggedRoot) return;
+			if (this.draggedRoots.size === 0) return;
 			e.preventDefault();
 			self.addClass("is-drag-over");
 		});
@@ -512,11 +553,22 @@ export class OutlineView extends ItemView {
 		self.addEventListener("drop", (e) => {
 			e.preventDefault();
 			self.removeClass("is-drag-over");
-			if (!this.draggedRoot || !this.lastCanvas) return;
-			if (this.dragSourceGroupId === group.node.id) return;
-			this.moveTreeToGroup(this.draggedRoot, group.node.id, this.dragSourceGroupId);
-			this.draggedRoot = null;
-			this.dragSourceGroupId = null;
+			if (this.draggedRoots.size === 0 || !this.lastCanvas) return;
+			const sourceGroups = new Set<string>();
+			for (const root of this.draggedRoots) {
+				const src = this.dragSources.get(root);
+				if (src === group.node.id) continue;
+				this.moveTreeToGroup(root, group.node.id, src ?? null);
+				if (src) sourceGroups.add(src);
+			}
+			if (this.onForestLayout) {
+				this.onForestLayout(this.lastCanvas, group.node.id);
+				for (const gid of sourceGroups) {
+					this.onForestLayout(this.lastCanvas, gid);
+				}
+			}
+			this.draggedRoots.clear();
+			this.dragSources.clear();
 		});
 
 		// Delayed click to toggle collapse (avoids conflict with dblclick rename)
@@ -591,13 +643,6 @@ export class OutlineView extends ItemView {
 		for (const desc of getDescendants(root)) {
 			desc.canvasNode.moveTo({ x: desc.canvasNode.x + dx, y: desc.canvasNode.y + dy });
 		}
-
-		if (this.onForestLayout) {
-			this.onForestLayout(canvas, targetGroupId);
-			if (sourceGroupId) {
-				this.onForestLayout(canvas, sourceGroupId);
-			}
-		}
 	}
 
 	private ungroupTree(root: TreeNode, sourceGroupId: string): void {
@@ -617,10 +662,6 @@ export class OutlineView extends ItemView {
 		root.canvasNode.moveTo({ x: root.canvasNode.x, y: maxY + MARGIN });
 		for (const desc of getDescendants(root)) {
 			desc.canvasNode.moveTo({ x: desc.canvasNode.x + dx, y: desc.canvasNode.y + dy });
-		}
-
-		if (this.onForestLayout) {
-			this.onForestLayout(canvas, sourceGroupId);
 		}
 	}
 
@@ -698,8 +739,9 @@ export class OutlineView extends ItemView {
 		this.allItemEls.clear();
 		this.collapsedGroups.clear();
 		this.activeNodeId = null;
-		this.draggedRoot = null;
-		this.dragSourceGroupId = null;
+		this.draggedRoots.clear();
+		this.dragSources.clear();
+		this.rootGroupMap.clear();
 		this.contentEl.empty();
 		this.contentEl.createDiv({
 			cls: "mindvas-outline-empty",
