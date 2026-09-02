@@ -66,6 +66,11 @@ export class KeyboardHandler {
 
 				this.onBeforeLeaveNode?.();
 				node.blur();
+				setTimeout(() => {
+					canvas.selectOnly(node);
+					node.nodeEl?.addClass("is-focused");
+					canvas.wrapperEl.focus();
+				}, 200);
 			},
 		});
 

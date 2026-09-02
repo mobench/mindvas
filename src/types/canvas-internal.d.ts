@@ -13,6 +13,12 @@ declare module "obsidian" {
 		children: WorkspaceLeaf[];
 		selectTab?: (leaf: WorkspaceLeaf) => void;
 	}
+	interface MenuItem {
+		setSubmenu(): Menu;
+	}
+	interface Vault {
+		getConfig(key: string): unknown;
+	}
 }
 
 /**

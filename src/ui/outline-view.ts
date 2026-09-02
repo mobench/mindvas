@@ -24,6 +24,7 @@ export class OutlineView extends ItemView {
 	private draggedRoots = new Set<TreeNode>();
 	private dragSources = new Map<TreeNode, string | null>();
 	private rootGroupMap = new Map<TreeNode, string>();
+	private groups: GroupInfo[] = [];
 	private activeNodeId: string | null = null;
 	private allItemEls = new Map<string, HTMLElement>();
 	private groupElMap = new Map<string, HTMLElement>();
@@ -167,12 +168,21 @@ export class OutlineView extends ItemView {
 			});
 		}
 
-		// Sort groups by canvas position (top-to-bottom, left-to-right)
+		// Sort groups by canvas position (top-to-bottom, then horizontal per direction)
+		const rtl = Boolean(this.app.vault.getConfig("rightToLeft"));
+		const isSameRow = (aTop: number, aBot: number, bTop: number, bBot: number) => {
+			const overlap = Math.min(aBot, bBot) - Math.max(aTop, bTop);
+			if (overlap <= 0) return false;
+			const shorter = Math.min(aBot - aTop, bBot - bTop);
+			return shorter > 0 && overlap >= shorter * 0.7;
+		};
 		groups.sort((a, b) => {
-			const dy = a.node.y - b.node.y;
-			if (Math.abs(dy) > 50) return dy;
-			return a.node.x - b.node.x;
+			const aTop = a.node.y, aBot = a.node.y + a.node.height;
+			const bTop = b.node.y, bBot = b.node.y + b.node.height;
+			if (isSameRow(aTop, aBot, bTop, bBot)) return rtl ? b.node.x - a.node.x : a.node.x - b.node.x;
+			return a.node.y - b.node.y;
 		});
+		this.groups = groups;
 
 		// Assign each root to the smallest containing group
 		const ungrouped: TreeNode[] = [];
@@ -202,7 +212,27 @@ export class OutlineView extends ItemView {
 			}
 		}
 
+		// Sort roots by canvas position: same row (tree heights overlap) → RTL, else top-to-bottom
+		const sortRoots = (roots: TreeNode[]) => {
+			const yRange = new Map<TreeNode, { top: number; bot: number }>();
+			for (const root of roots) {
+				let top = root.canvasNode.y;
+				let bot = root.canvasNode.y + root.canvasNode.height;
+				for (const desc of getDescendants(root)) {
+					top = Math.min(top, desc.canvasNode.y);
+					bot = Math.max(bot, desc.canvasNode.y + desc.canvasNode.height);
+				}
+				yRange.set(root, { top, bot });
+			}
+			roots.sort((a, b) => {
+				const ar = yRange.get(a)!, br = yRange.get(b)!;
+				if (isSameRow(ar.top, ar.bot, br.top, br.bot)) return rtl ? b.canvasNode.x - a.canvasNode.x : a.canvasNode.x - b.canvasNode.x;
+				return a.canvasNode.y - b.canvasNode.y;
+			});
+		};
+
 		// Render ungrouped roots in a drop zone (accepts trees dragged out of groups)
+		sortRoots(ungrouped);
 		const ungroupedZone = this.contentEl.createDiv({ cls: "mindvas-outline-ungrouped-zone" });
 		ungroupedZone.addEventListener("dragover", (e) => {
 			if (this.draggedRoots.size === 0) return;
@@ -244,6 +274,7 @@ export class OutlineView extends ItemView {
 		// Render each group with roots as a collapsible section
 		for (const group of groups) {
 			if (group.roots.length === 0) continue;
+			sortRoots(group.roots);
 			this.renderGroup(group, canvas);
 		}
 
@@ -357,6 +388,22 @@ export class OutlineView extends ItemView {
 
 		this.allItemEls.set(root.canvasNode.id, self);
 
+		let hoverPrevSelection: Array<CanvasNode> | null = null;
+		self.addEventListener("mouseenter", () => {
+			if (!this.lastCanvas) return;
+			hoverPrevSelection = Array.from(this.lastCanvas.selection) as Array<CanvasNode>;
+			this.lastCanvas.selectOnly(root.canvasNode);
+		});
+		self.addEventListener("mouseleave", () => {
+			if (!this.lastCanvas || !hoverPrevSelection) return;
+			this.lastCanvas.deselectAll();
+			for (const node of hoverPrevSelection) {
+				this.lastCanvas.selection.add(node as CanvasNode);
+				node.nodeEl?.addClass("is-focused");
+			}
+			hoverPrevSelection = null;
+		});
+
 		self.addEventListener("click", (e) => {
 			if (e.ctrlKey) {
 				// Toggle multi-selection
@@ -400,6 +447,26 @@ export class OutlineView extends ItemView {
 						new Notice("Node link copied");
 					});
 			});
+			const targetGroups = this.groups.filter(g => g.node.id !== groupId);
+			if (targetGroups.length > 0) {
+				menu.addItem((item) => {
+					item.setTitle("Move to group")
+						.setIcon("folder-input");
+					const sub = item.setSubmenu();
+					for (const g of targetGroups) {
+						sub.addItem((subItem) => {
+							subItem.setTitle(g.label).onClick(() => {
+								this.moveTreeToGroup(root, g.node.id, groupId ?? null);
+								if (this.onForestLayout && this.lastCanvas) {
+									this.onForestLayout(this.lastCanvas, g.node.id);
+									if (groupId) this.onForestLayout(this.lastCanvas, groupId);
+								}
+								if (this.lastCanvas) this.refresh(this.lastCanvas);
+							});
+						});
+					}
+				});
+			}
 			if (isUngrouped) {
 				if (!this.selectedRoots.has(root)) {
 					this.clearSelection();
@@ -571,7 +638,19 @@ export class OutlineView extends ItemView {
 			this.dragSources.clear();
 		});
 
-		// Delayed click to toggle collapse (avoids conflict with dblclick rename)
+		// Collapse toggle on chevron icon only
+		collapseIcon.addEventListener("click", (e) => {
+			e.stopPropagation();
+			if (this.collapsedGroups.has(group.node.id)) {
+				this.collapsedGroups.delete(group.node.id);
+				treeItem.removeClass("is-collapsed");
+			} else {
+				this.collapsedGroups.add(group.node.id);
+				treeItem.addClass("is-collapsed");
+			}
+		});
+
+		// Delayed click to zoom to group (avoids conflict with dblclick rename)
 		let clickTimer: ReturnType<typeof setTimeout> | null = null;
 		self.addEventListener("click", () => {
 			if (clickTimer !== null) {
@@ -581,13 +660,15 @@ export class OutlineView extends ItemView {
 			}
 			clickTimer = setTimeout(() => {
 				clickTimer = null;
-				if (this.collapsedGroups.has(group.node.id)) {
-					this.collapsedGroups.delete(group.node.id);
-					treeItem.removeClass("is-collapsed");
-				} else {
-					this.collapsedGroups.add(group.node.id);
-					treeItem.addClass("is-collapsed");
+				if (this.canvasLeaf) {
+					this.app.workspace.setActiveLeaf(this.canvasLeaf, { focus: true });
 				}
+				const g = group.node;
+				canvas.selectOnly(g);
+				canvas.zoomToBbox({
+					minX: g.x, minY: g.y,
+					maxX: g.x + g.width, maxY: g.y + g.height,
+				});
 			}, 250);
 		});
 
@@ -742,6 +823,7 @@ export class OutlineView extends ItemView {
 		this.draggedRoots.clear();
 		this.dragSources.clear();
 		this.rootGroupMap.clear();
+		this.groups = [];
 		this.contentEl.empty();
 		this.contentEl.createDiv({
 			cls: "mindvas-outline-empty",
