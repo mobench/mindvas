@@ -45,11 +45,12 @@ export function buildForest(canvas: Canvas): TreeNode[] {
 		});
 	}
 
-	// Build parent-child relationships from edges
+	// Build parent-child relationships from edges (first parent wins)
 	for (const edge of canvas.edges.values()) {
 		const parentTree = nodeMap.get(edge.from.node.id);
 		const childTree = nodeMap.get(edge.to.node.id);
 		if (parentTree && childTree) {
+			if (childTree.parent) continue;
 			childTree.parent = parentTree;
 			parentTree.children.push(childTree);
 		}

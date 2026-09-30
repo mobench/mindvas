@@ -76,6 +76,8 @@ export class LayoutEngine {
 			this.layoutGroup(root, leftChildren, "left", rootX, rootY, positions);
 		}
 
+		this.centerMultiParentNodes(canvas, forest, positions);
+
 		this.applyPositions(canvas, positions);
 		updateAllEdgeSides(canvas);
 	}
@@ -118,6 +120,8 @@ export class LayoutEngine {
 			this.layoutGroup(parentTreeNode, rightChildren, "right", px, py, positions);
 			this.layoutGroup(parentTreeNode, leftChildren, "left", px, py, positions);
 		}
+
+		this.centerMultiParentNodes(canvas, forest, positions);
 
 		this.applyPositions(canvas, positions);
 		updateAllEdgeSides(canvas);
@@ -433,6 +437,89 @@ export class LayoutEngine {
 			maxY = Math.max(maxY, n.y + n.height);
 		}
 		return { minX, minY, maxX, maxY };
+	}
+
+	/**
+	 * Center nodes with multiple incoming edges between their parents.
+	 * Shifts the node and its entire subtree so the node's vertical center
+	 * aligns with the midpoint of all its parents' vertical centers.
+	 */
+	private centerMultiParentNodes(
+		canvas: Canvas,
+		forest: TreeNode[],
+		positions: Map<string, NodePosition>
+	): void {
+		const incomingParents = new Map<string, string[]>();
+		for (const edge of canvas.edges.values()) {
+			const childId = edge.to.node.id;
+			const parentId = edge.from.node.id;
+			if (!incomingParents.has(childId)) {
+				incomingParents.set(childId, []);
+			}
+			incomingParents.get(childId)!.push(parentId);
+		}
+
+		for (const [childId, parentIds] of incomingParents) {
+			if (parentIds.length < 2) continue;
+
+			const childPos = positions.get(childId);
+			if (!childPos) continue;
+
+			const childNode = canvas.nodes.get(childId);
+			if (!childNode) continue;
+
+			const parentCenters: number[] = [];
+			for (const parentId of parentIds) {
+				const parentNode = canvas.nodes.get(parentId);
+				if (!parentNode) continue;
+				const parentPos = positions.get(parentId);
+				const py = parentPos ? parentPos.y : parentNode.y;
+				parentCenters.push(py + parentNode.height / 2);
+			}
+			if (parentCenters.length < 2) continue;
+
+			const minCenter = Math.min(...parentCenters);
+			const maxCenter = Math.max(...parentCenters);
+			const targetCenterY = (minCenter + maxCenter) / 2;
+
+			const childH = childNode.height || this.config.nodeHeight;
+			const currentCenterY = childPos.y + childH / 2;
+			const deltaY = targetCenterY - currentCenterY;
+			if (Math.abs(deltaY) < 1) continue;
+
+			const treeNode = findTreeForNode(forest, childId);
+			if (!treeNode) continue;
+
+			const descendants = getDescendants(treeNode);
+			const movingIds = new Set([childId, ...descendants.map(d => d.canvasNode.id)]);
+
+			// Skip centering if it would overlap with any other node in the same column
+			const newTop = childPos.y + deltaY;
+			const newBottom = newTop + childH;
+			const childW = childNode.width || this.config.nodeWidth;
+			let wouldOverlap = false;
+			for (const [otherId, otherPos] of positions) {
+				if (movingIds.has(otherId)) continue;
+				const otherNode = canvas.nodes.get(otherId);
+				if (!otherNode) continue;
+				const otherW = otherNode.width || this.config.nodeWidth;
+				const xOverlap = childPos.x < otherPos.x + otherW
+					&& childPos.x + childW > otherPos.x;
+				if (!xOverlap) continue;
+				const otherH = otherNode.height || this.config.nodeHeight;
+				if (newTop < otherPos.y + otherH + this.config.verticalGap
+					&& newBottom + this.config.verticalGap > otherPos.y) {
+					wouldOverlap = true;
+					break;
+				}
+			}
+			if (wouldOverlap) continue;
+
+			for (const tn of [treeNode, ...descendants]) {
+				const pos = positions.get(tn.canvasNode.id);
+				if (pos) pos.y += deltaY;
+			}
+		}
 	}
 
 	/**
