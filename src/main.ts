@@ -22,6 +22,7 @@ import { getGroupIds, buildForest, findTreeForNode } from "./mindmap/tree-model"
 import { BacklinkIndex } from "./backlinks/backlink-index";
 import { BacklinkBadges } from "./ui/backlink-badges";
 import { rewriteCanvasPath, repairBrokenLinks } from "./backlinks/link-updater";
+import { NodeSuggest } from "./ui/node-suggest";
 
 export default class CanvasMindMapPlugin extends Plugin {
 	settings: MindMapSettings = DEFAULT_SETTINGS;
@@ -314,6 +315,9 @@ export default class CanvasMindMapPlugin extends Plugin {
 				}
 			})
 		);
+
+		// Node link suggester: type @@ inside a node to insert a link
+		this.registerEditorSuggest(new NodeSuggest(this.app));
 
 		// Import FreeMind: right-click context menu on folders
 		this.registerEvent(
