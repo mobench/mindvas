@@ -12,6 +12,7 @@ export interface MindMapSettings {
 	defaultMindmapMode: boolean;
 	navigationZoomPadding: number;
 	mouseNavigation: boolean;
+	showBacklinks: boolean;
 }
 
 export const DEFAULT_SETTINGS: MindMapSettings = {
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: MindMapSettings = {
 	defaultMindmapMode: true,
 	navigationZoomPadding: 200,
 	mouseNavigation: false,
+	showBacklinks: true,
 };
 
 export class MindMapSettingTab extends PluginSettingTab {
@@ -178,6 +180,18 @@ export class MindMapSettingTab extends PluginSettingTab {
 							this.plugin.settings.navigationZoomPadding = num;
 							debouncedSave();
 						}
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show backlink badges")
+			.setDesc("Show a count badge on nodes that are referenced by other notes or canvases via node links")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showBacklinks)
+					.onChange(async (value) => {
+						this.plugin.settings.showBacklinks = value;
+						await this.plugin.saveSettings();
 					})
 			);
 	}

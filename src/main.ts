@@ -19,6 +19,9 @@ import { registerAutoResize, AutoResizeHandle, getEditorElements } from "./ui/au
 import { OutlineView, OUTLINE_VIEW_TYPE } from "./ui/outline-view";
 import { freemindToCanvas } from "./import/freemind-import";
 import { getGroupIds, buildForest, findTreeForNode } from "./mindmap/tree-model";
+import { BacklinkIndex } from "./backlinks/backlink-index";
+import { BacklinkBadges } from "./ui/backlink-badges";
+import { rewriteCanvasPath, repairBrokenLinks } from "./backlinks/link-updater";
 
 export default class CanvasMindMapPlugin extends Plugin {
 	settings: MindMapSettings = DEFAULT_SETTINGS;
@@ -60,6 +63,8 @@ export default class CanvasMindMapPlugin extends Plugin {
 	private navSkipTracking = false;
 	private lastNavCanvas: Canvas | null = null;
 	private cleanupNavHandler: (() => void) | null = null;
+	private backlinkIndex: BacklinkIndex | null = null;
+	private backlinkBadges: BacklinkBadges | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -237,6 +242,25 @@ export default class CanvasMindMapPlugin extends Plugin {
 			},
 		});
 
+		// Command: Repair broken node links from past canvas renames
+		this.addCommand({
+			id: "mindmap-repair-node-links",
+			name: "Repair broken node links",
+			callback: () => {
+				void repairBrokenLinks(this.app).then((count) => {
+					if (count === 0) {
+						new Notice("No broken node links found");
+					} else {
+						new Notice(`Repaired ${count} broken node link${count > 1 ? "s" : ""}`);
+						if (this.backlinkIndex) {
+							this.backlinkIndex.invalidate();
+							void this.backlinkIndex.buildFullIndex().then(() => this.debouncedBadgeRefresh());
+						}
+					}
+				});
+			},
+		});
+
 		// Watch for canvas view activation to set up UI
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
@@ -252,6 +276,44 @@ export default class CanvasMindMapPlugin extends Plugin {
 			const view = this.app.workspace.getActiveViewOfType(ItemView);
 			if (view) this.onLeafChange(view.leaf);
 		});
+
+		// Initialize backlink index
+		this.backlinkIndex = new BacklinkIndex(this.app);
+		const debouncedBacklinkUpdate = debounce((file: TFile) => {
+			if (this.unloaded || !this.backlinkIndex) return;
+			void this.backlinkIndex.updateFile(file).then(() => this.debouncedBadgeRefresh());
+		}, 300);
+		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				if (file instanceof TFile && this.settings.showBacklinks) debouncedBacklinkUpdate(file);
+			})
+		);
+		this.registerEvent(
+			this.app.vault.on("delete", (file) => {
+				if (file instanceof TFile && this.backlinkIndex) {
+					this.backlinkIndex.removeFile(file.path);
+					this.debouncedBadgeRefresh();
+				}
+			})
+		);
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				if (file instanceof TFile && this.settings.showBacklinks) debouncedBacklinkUpdate(file);
+			})
+		);
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				if (file instanceof TFile && file.extension === "canvas") {
+					void rewriteCanvasPath(this.app, oldPath, file.path).then((count) => {
+						if (count > 0) new Notice(`Updated ${count} node link${count > 1 ? "s" : ""} to match renamed canvas`);
+						if (this.backlinkIndex) {
+							this.backlinkIndex.invalidate();
+							void this.backlinkIndex.buildFullIndex().then(() => this.debouncedBadgeRefresh());
+						}
+					});
+				}
+			})
+		);
 
 		// Import FreeMind: right-click context menu on folders
 		this.registerEvent(
@@ -441,6 +503,14 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.toggleBtnEl.remove();
 			this.toggleBtnEl = null;
 		}
+		if (this.backlinkBadges) {
+			this.backlinkBadges.cleanup();
+			this.backlinkBadges = null;
+		}
+		if (this.backlinkIndex) {
+			this.backlinkIndex.clear();
+			this.backlinkIndex = null;
+		}
 	}
 
 	/**
@@ -492,6 +562,10 @@ export default class CanvasMindMapPlugin extends Plugin {
 		if (this.autoResizeHandle) {
 			this.autoResizeHandle.cleanup();
 			this.autoResizeHandle = null;
+		}
+		if (this.backlinkBadges) {
+			this.backlinkBadges.cleanup();
+			this.backlinkBadges = null;
 		}
 
 		const canvas = this.canvasApi.getActiveCanvas();
@@ -725,6 +799,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 		canvas.requestSave = () => {
 			origSave();
 			this.debouncedOutlineRefresh();
+			this.debouncedBadgeRefresh();
 		};
 		canvas.createGroupNode = (options: CreateNodeOptions & { label?: string }) => {
 			const group = origCreateGroup(options);
@@ -747,6 +822,46 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.showOutline(canvas);
 		} else {
 			this.hideOutline();
+		}
+
+		// Set up backlink badges
+		if (this.settings.showBacklinks && this.backlinkIndex) {
+			const idx = this.backlinkIndex;
+			void idx.buildFullIndex().then(() => {
+				if (this.unloaded) return;
+				const current = this.canvasApi.getActiveCanvas();
+				if (current !== canvas) return;
+				this.backlinkBadges = new BacklinkBadges(
+					this.app,
+					idx,
+					(path) => { void this.app.workspace.openLinkText(path, ""); },
+					(canvasPath, nodeId) => { this.navigateToCanvasNode(canvasPath, nodeId); },
+				);
+				this.backlinkBadges.render(canvas);
+			});
+		}
+	}
+
+	private debouncedBadgeRefresh = debounce(() => {
+		if (this.unloaded || !this.settings.showBacklinks) return;
+		const canvas = this.canvasApi.getActiveCanvas();
+		if (canvas && this.backlinkBadges) {
+			this.backlinkBadges.render(canvas);
+		}
+	}, 500);
+
+	private navigateToCanvasNode(canvasPath: string, nodeId: string): void {
+		const file = this.app.vault.getAbstractFileByPath(canvasPath);
+		if (file && file instanceof TFile) {
+			const leaf = this.app.workspace.getLeaf();
+			void leaf.openFile(file).then(async () => {
+				await new Promise(resolve => setTimeout(resolve, 200));
+				const canvas = this.canvasApi.getActiveCanvas() ?? this.canvasApi.getAnyCanvas();
+				if (!canvas) return;
+				const node = canvas.nodes.get(nodeId);
+				if (!node) return;
+				this.canvasApi.selectAndZoom(canvas, node, this.settings.navigationZoomPadding);
+			});
 		}
 	}
 
