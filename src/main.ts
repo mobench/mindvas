@@ -84,7 +84,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 			nodeWidth: this.settings.defaultNodeWidth,
 			nodeHeight: this.settings.defaultNodeHeight,
 		});
-		this.branchColors = new BranchColors(this.canvasApi);
+		this.branchColors = new BranchColors(this.canvasApi, () => this.settings.colorLeafNodes);
 		this.navigation = new Navigation(this.canvasApi);
 
 		// Register keyboard shortcuts

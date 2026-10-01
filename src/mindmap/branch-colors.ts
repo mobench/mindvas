@@ -16,6 +16,7 @@ export class BranchColors {
 
 	constructor(
 		private canvasApi: CanvasAPI,
+		private colorLeafNodes: () => boolean = () => true,
 		palette?: string[]
 	) {
 		this.palette = palette ?? DEFAULT_PALETTE;
@@ -44,16 +45,19 @@ export class BranchColors {
 	 * Color a single branch (node + all descendants + edges).
 	 */
 	private colorBranch(canvas: Canvas, node: TreeNode, color: string): void {
-		// Color the node itself
-		node.canvasNode.setColor(color);
+		const isLeaf = node.children.length === 0;
 
-		// Color the edge connecting to this node from its parent
+		if (!isLeaf || this.colorLeafNodes()) {
+			node.canvasNode.setColor(color);
+		} else {
+			node.canvasNode.setColor("");
+		}
+
 		const incomingEdge = this.findIncomingEdge(canvas, node.canvasNode);
 		if (incomingEdge) {
 			incomingEdge.setColor(color);
 		}
 
-		// Recurse into all descendants
 		for (const child of node.children) {
 			this.colorBranch(canvas, child, color);
 		}

@@ -18,6 +18,9 @@ export class NodeOperations {
 		private config: NodeOpsConfig
 	) {}
 
+	get nodeWidth(): number { return this.config.nodeWidth; }
+	get nodeHeight(): number { return this.config.nodeHeight; }
+
 	/**
 	 * Add a child node to the selected node.
 	 * If parent is root, places on the side with fewer children (ties go right).

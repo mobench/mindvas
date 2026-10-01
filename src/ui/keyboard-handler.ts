@@ -135,6 +135,28 @@ export class KeyboardHandler {
 			},
 		});
 
+		this.plugin.addCommand({
+			id: "mindmap-add-root",
+			name: "Add root node",
+			checkCallback: (checking: boolean) => {
+				const canvas = this.canvasApi.getActiveCanvas();
+				if (!canvas) return false;
+				if (checking) return true;
+
+				const w = this.nodeOps.nodeWidth;
+				const h = this.nodeOps.nodeHeight;
+				const vw = canvas.wrapperEl.clientWidth;
+				const vh = canvas.wrapperEl.clientHeight;
+				const cx = canvas.tx + vw / (2 * canvas.tZoom);
+				const cy = canvas.ty + vh / (2 * canvas.tZoom);
+
+				const newNode = this.canvasApi.createTextNode(canvas, cx - w / 2, cy - h / 2, "", w, h);
+				canvas.requestSave();
+				this.onNodesChanged(canvas);
+				this.canvasApi.selectAndEdit(canvas, newNode, this.zoomPadding);
+			},
+		});
+
 		// Ctrl+Shift+Enter → Delete node, focus parent
 		this.plugin.addCommand({
 			id: "mindmap-delete-node",

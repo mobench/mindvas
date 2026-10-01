@@ -13,6 +13,7 @@ export interface MindMapSettings {
 	navigationZoomPadding: number;
 	mouseNavigation: boolean;
 	showBacklinks: boolean;
+	colorLeafNodes: boolean;
 }
 
 export const DEFAULT_SETTINGS: MindMapSettings = {
@@ -27,6 +28,7 @@ export const DEFAULT_SETTINGS: MindMapSettings = {
 	navigationZoomPadding: 200,
 	mouseNavigation: false,
 	showBacklinks: true,
+	colorLeafNodes: true,
 };
 
 export class MindMapSettingTab extends PluginSettingTab {
@@ -77,6 +79,18 @@ export class MindMapSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.autoColor)
 					.onChange(async (value) => {
 						this.plugin.settings.autoColor = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Color leaf nodes")
+			.setDesc("When disabled, leaf nodes (no children) are left uncolored")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.colorLeafNodes)
+					.onChange(async (value) => {
+						this.plugin.settings.colorLeafNodes = value;
 						await this.plugin.saveSettings();
 					})
 			);
