@@ -1,4 +1,4 @@
-import { EventRef, ItemView, Menu, WorkspaceLeaf } from "obsidian";
+import { Editor, EventRef, ItemView, Menu, WorkspaceLeaf } from "obsidian";
 
 /** Augment Obsidian's types with undocumented APIs used by this plugin. */
 declare module "obsidian" {
@@ -39,6 +39,7 @@ export interface CanvasNode {
 	nodeEl: HTMLElement;
 	contentEl: HTMLElement;
 	labelEl?: HTMLElement;
+	child?: { editor?: Editor };
 	isEditing: boolean;
 	unknownData: Record<string, unknown>;
 

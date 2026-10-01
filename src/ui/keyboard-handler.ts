@@ -365,13 +365,39 @@ export class KeyboardHandler {
 	 * Returns the selected text, or null if nothing is selected.
 	 */
 	private extractAndDeleteSelection(node: CanvasNode): string | null {
+		// Approach 1: CM6 via cmView
 		const view = this.getEditorView(node);
-		if (!view) return null;
-		const { from, to } = view.state.selection.main;
-		if (from === to) return null;
-		const text = view.state.sliceDoc(from, to);
-		view.dispatch({ changes: { from, to, insert: "" } });
-		return text;
+		if (view) {
+			const { from, to } = view.state.selection.main;
+			if (from !== to) {
+				const text = view.state.sliceDoc(from, to);
+				view.dispatch({ changes: { from, to, insert: "" } });
+				return text;
+			}
+		}
+
+		if (node.child?.editor) {
+			const sel = node.child.editor.getSelection();
+			if (sel) {
+				node.child.editor.replaceSelection("");
+				return sel;
+			}
+		}
+
+		const iframe = node.contentEl?.querySelector<HTMLIFrameElement>("iframe");
+		const iframeWin = iframe?.contentWindow;
+		if (iframeWin) {
+			const sel = iframeWin.getSelection();
+			if (sel && !sel.isCollapsed) {
+				const text = sel.toString();
+				if (text) {
+					sel.deleteFromDocument();
+					return text;
+				}
+			}
+		}
+
+		return null;
 	}
 
 	/**
