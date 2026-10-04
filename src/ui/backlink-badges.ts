@@ -98,6 +98,7 @@ export class BacklinkBadges {
 		if (entries.length === 0) return;
 
 		const popover = createDiv({ cls: "mindvas-backlinks-popover" });
+		if (this.app.vault.getConfig("rightToLeft")) popover.addClass("is-rtl");
 
 		for (const entry of entries) {
 			const item = popover.createDiv({ cls: "mindvas-backlinks-popover-item" });
@@ -109,6 +110,21 @@ export class BacklinkBadges {
 			const basename = entry.sourcePath.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, "");
 			textContainer.createDiv({ cls: "mindvas-backlinks-popover-filename", text: basename });
 			textContainer.createDiv({ cls: "mindvas-backlinks-popover-snippet", text: entry.snippet });
+
+			if (entry.rootText) {
+				const breadcrumbEl = textContainer.createDiv({ cls: "mindvas-backlinks-popover-breadcrumb" });
+				const rootIconEl = breadcrumbEl.createSpan({ cls: "mindvas-suggest-breadcrumb-icon" });
+				setIcon(rootIconEl, "circle-dot");
+				const rootLabel = entry.rootText.length > 25 ? entry.rootText.slice(0, 24) + "…" : entry.rootText;
+				breadcrumbEl.appendText(" " + rootLabel);
+				if (entry.branchText) {
+					breadcrumbEl.appendText(" › ");
+					const branchIconEl = breadcrumbEl.createSpan({ cls: "mindvas-suggest-breadcrumb-icon" });
+					setIcon(branchIconEl, "leaf");
+					const branchLabel = entry.branchText.length > 25 ? entry.branchText.slice(0, 24) + "…" : entry.branchText;
+					breadcrumbEl.appendText(" " + branchLabel);
+				}
+			}
 
 			item.addEventListener("click", () => {
 				this.dismissPopover();

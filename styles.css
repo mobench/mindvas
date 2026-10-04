@@ -1,5 +1,34 @@
 /* Mindvas Plugin Styles */
 
+/* Node suggest breadcrumb */
+.mindvas-suggest-breadcrumb {
+	color: var(--text-muted);
+}
+
+.mindvas-suggest-breadcrumb-icon {
+	display: inline-flex;
+	vertical-align: middle;
+}
+
+.mindvas-suggest-breadcrumb-icon svg {
+	width: 12px;
+	height: 12px;
+}
+
+/* Backlink popover breadcrumb */
+.mindvas-backlinks-popover-breadcrumb {
+	font-size: var(--font-smallest);
+	color: var(--text-muted);
+}
+
+.mindvas-backlinks-popover.is-rtl {
+	direction: rtl;
+}
+
+.mindvas-backlinks-popover.is-rtl .mindvas-backlinks-popover-breadcrumb {
+	direction: rtl;
+}
+
 /* Mindmap mode toggle button in canvas toolbar */
 .mindvas-toggle-btn {
 	color: var(--text-muted);

@@ -9,6 +9,7 @@ import {
 	prepareFuzzySearch,
 	renderResults,
 	SearchResult,
+	setIcon,
 } from "obsidian";
 
 interface CanvasNodeEntry {
@@ -16,6 +17,8 @@ interface CanvasNodeEntry {
 	canvasPath: string;
 	canvasName: string;
 	displayText: string;
+	rootText: string | null;
+	branchText: string | null;
 }
 
 interface NodeSuggestion extends CanvasNodeEntry {
@@ -23,6 +26,31 @@ interface NodeSuggestion extends CanvasNodeEntry {
 }
 
 const TRIGGER = "@@";
+
+function cleanDisplayText(raw: string): string {
+	const firstLine = raw.split("\n")[0].trim();
+	return firstLine
+		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+		.replace(/[#*_~`>]/g, "")
+		.trim();
+}
+
+function truncate(text: string, max: number): string {
+	return text.length > max ? text.slice(0, max - 1) + "…" : text;
+}
+
+function getAncestorPath(nodeId: string, parentMap: Map<string, string>): string[] {
+	const path: string[] = [];
+	const visited = new Set<string>([nodeId]);
+	let current = nodeId;
+	while (parentMap.has(current)) {
+		current = parentMap.get(current)!;
+		if (visited.has(current)) break;
+		visited.add(current);
+		path.unshift(current);
+	}
+	return path;
+}
 
 export class NodeSuggest extends EditorSuggest<NodeSuggestion> {
 	private cache: CanvasNodeEntry[] | null = null;
@@ -69,7 +97,10 @@ export class NodeSuggest extends EditorSuggest<NodeSuggestion> {
 		const results: NodeSuggestion[] = [];
 
 		for (const entry of entries) {
-			const match = fuzzy(entry.displayText) ?? fuzzy(entry.canvasName);
+			const match = fuzzy(entry.displayText)
+				?? fuzzy(entry.canvasName)
+				?? (entry.rootText ? fuzzy(entry.rootText) : null)
+				?? (entry.branchText ? fuzzy(entry.branchText) : null);
 			if (match) {
 				results.push({ ...entry, match });
 			}
@@ -87,10 +118,22 @@ export class NodeSuggest extends EditorSuggest<NodeSuggestion> {
 			titleEl.setText(suggestion.displayText);
 		}
 
-		el.createDiv({
-			cls: "suggestion-note",
-			text: suggestion.canvasName,
-		});
+		const noteEl = el.createDiv({ cls: "suggestion-note" });
+		noteEl.appendText(suggestion.canvasName);
+
+		if (suggestion.rootText) {
+			noteEl.appendText(" — ");
+			const breadcrumbEl = noteEl.createSpan({ cls: "mindvas-suggest-breadcrumb" });
+			const rootIconEl = breadcrumbEl.createSpan({ cls: "mindvas-suggest-breadcrumb-icon" });
+			setIcon(rootIconEl, "circle-dot");
+			breadcrumbEl.appendText(" " + truncate(suggestion.rootText, 30));
+			if (suggestion.branchText) {
+				breadcrumbEl.appendText(" › ");
+				const branchIconEl = breadcrumbEl.createSpan({ cls: "mindvas-suggest-breadcrumb-icon" });
+				setIcon(branchIconEl, "leaf");
+				breadcrumbEl.appendText(" " + truncate(suggestion.branchText, 30));
+			}
+		}
 	}
 
 	selectSuggestion(suggestion: NodeSuggestion, _evt: MouseEvent | KeyboardEvent): void {
@@ -123,7 +166,10 @@ export class NodeSuggest extends EditorSuggest<NodeSuggestion> {
 				continue;
 			}
 
-			let data: { nodes?: Array<{ id?: string; type?: string; text?: string }> };
+			let data: {
+				nodes?: Array<{ id?: string; type?: string; text?: string }>;
+				edges?: Array<{ fromNode?: string; toNode?: string }>;
+			};
 			try {
 				data = JSON.parse(content);
 			} catch {
@@ -133,24 +179,43 @@ export class NodeSuggest extends EditorSuggest<NodeSuggestion> {
 			if (!data.nodes) continue;
 			const canvasName = file.basename;
 
+			const parentMap = new Map<string, string>();
+			if (data.edges) {
+				for (const edge of data.edges) {
+					if (!edge.fromNode || !edge.toNode) continue;
+					if (parentMap.has(edge.toNode)) continue;
+					parentMap.set(edge.toNode, edge.fromNode);
+				}
+			}
+
+			const nodeTextMap = new Map<string, string>();
 			for (const node of data.nodes) {
 				if (!node.id || node.type === "group") continue;
 				const text = node.text?.trim();
 				if (!text) continue;
+				const cleaned = cleanDisplayText(text);
+				if (cleaned) nodeTextMap.set(node.id, cleaned);
+			}
 
-				const firstLine = text.split("\n")[0].trim();
-				const displayText = firstLine
-					.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-					.replace(/[#*_~`>]/g, "")
-					.trim();
+			for (const [nodeId, displayText] of nodeTextMap) {
+				const ancestors = getAncestorPath(nodeId, parentMap);
+				let rootText: string | null = null;
+				let branchText: string | null = null;
 
-				if (!displayText) continue;
+				if (ancestors.length >= 1) {
+					rootText = nodeTextMap.get(ancestors[0]) ?? null;
+				}
+				if (ancestors.length >= 2) {
+					branchText = nodeTextMap.get(ancestors[1]) ?? null;
+				}
 
 				entries.push({
-					nodeId: node.id,
+					nodeId,
 					canvasPath: file.path,
 					canvasName,
 					displayText,
+					rootText,
+					branchText,
 				});
 			}
 		}

@@ -5,6 +5,8 @@ export interface BacklinkEntry {
 	sourceType: "md" | "canvas";
 	sourceNodeId?: string;
 	snippet: string;
+	rootText?: string;
+	branchText?: string;
 }
 
 type BacklinkKey = string;
@@ -29,15 +31,38 @@ function firstLine(text: string): string {
 	return line.length > 80 ? line.slice(0, 77) + "…" : line;
 }
 
+function cleanNodeText(raw: string): string {
+	const line = raw.split("\n")[0].trim();
+	return line
+		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+		.replace(/[#*_~`>]/g, "")
+		.trim();
+}
+
+function getAncestorPath(nodeId: string, parentMap: Map<string, string>): string[] {
+	const path: string[] = [];
+	const visited = new Set<string>([nodeId]);
+	let current = nodeId;
+	while (parentMap.has(current)) {
+		current = parentMap.get(current)!;
+		if (visited.has(current)) break;
+		visited.add(current);
+		path.unshift(current);
+	}
+	return path;
+}
+
 export class BacklinkIndex {
 	private index = new Map<BacklinkKey, BacklinkEntry[]>();
 	private fileKeys = new Map<string, Set<BacklinkKey>>();
 	private built = false;
+	private building = false;
 
 	constructor(private app: App) {}
 
 	async buildFullIndex(): Promise<void> {
-		if (this.built) return;
+		if (this.built || this.building) return;
+		this.building = true;
 		this.index.clear();
 		this.fileKeys.clear();
 
@@ -67,9 +92,11 @@ export class BacklinkIndex {
 		}
 
 		this.built = true;
+		this.building = false;
 	}
 
 	async updateFile(file: TFile): Promise<void> {
+		if (this.building) return;
 		this.removeFile(file.path);
 		if (file.extension === "md") {
 			await this.scanMdFile(file);
@@ -158,7 +185,10 @@ export class BacklinkIndex {
 			return;
 		}
 
-		let data: { nodes?: Array<{ type?: string; text?: string; id?: string }> };
+		let data: {
+			nodes?: Array<{ type?: string; text?: string; id?: string }>;
+			edges?: Array<{ fromNode?: string; toNode?: string }>;
+		};
 		try {
 			data = JSON.parse(content);
 		} catch {
@@ -166,6 +196,25 @@ export class BacklinkIndex {
 		}
 
 		if (!data.nodes) return;
+
+		const parentMap = new Map<string, string>();
+		if (data.edges) {
+			for (const edge of data.edges) {
+				if (!edge.fromNode || !edge.toNode) continue;
+				if (parentMap.has(edge.toNode)) continue;
+				parentMap.set(edge.toNode, edge.fromNode);
+			}
+		}
+
+		const nodeTextMap = new Map<string, string>();
+		for (const node of data.nodes) {
+			if (!node.id || node.type === "group") continue;
+			const text = node.text?.trim();
+			if (!text) continue;
+			const cleaned = cleanNodeText(text);
+			if (cleaned) nodeTextMap.set(node.id, cleaned);
+		}
+
 		for (const node of data.nodes) {
 			if (node.type !== "text" || !node.text) continue;
 
@@ -175,11 +224,26 @@ export class BacklinkIndex {
 				const canvasPath = decodeURIComponent(match[1]);
 				const nodeId = match[2];
 				const key = makeKey(canvasPath, nodeId);
+
+				let rootText: string | undefined;
+				let branchText: string | undefined;
+				if (node.id) {
+					const ancestors = getAncestorPath(node.id, parentMap);
+					if (ancestors.length >= 1) {
+						rootText = nodeTextMap.get(ancestors[0]);
+					}
+					if (ancestors.length >= 2) {
+						branchText = nodeTextMap.get(ancestors[1]);
+					}
+				}
+
 				this.addEntry(key, {
 					sourcePath: file.path,
 					sourceType: "canvas",
 					sourceNodeId: node.id,
 					snippet: firstLine(node.text),
+					rootText,
+					branchText,
 				});
 			}
 		}
