@@ -109,7 +109,6 @@ export class BacklinkBadges {
 			const textContainer = item.createDiv({ cls: "mindvas-backlinks-popover-text" });
 			const basename = entry.sourcePath.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, "");
 			textContainer.createDiv({ cls: "mindvas-backlinks-popover-filename", text: basename });
-			textContainer.createDiv({ cls: "mindvas-backlinks-popover-snippet", text: entry.snippet });
 
 			if (entry.rootText) {
 				const breadcrumbEl = textContainer.createDiv({ cls: "mindvas-backlinks-popover-breadcrumb" });
@@ -125,6 +124,8 @@ export class BacklinkBadges {
 					breadcrumbEl.appendText(" " + branchLabel);
 				}
 			}
+
+			textContainer.createDiv({ cls: "mindvas-backlinks-popover-snippet", text: entry.snippet });
 
 			item.addEventListener("click", () => {
 				this.dismissPopover();
