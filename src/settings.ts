@@ -14,6 +14,7 @@ export interface MindMapSettings {
 	mouseNavigation: boolean;
 	showBacklinks: boolean;
 	colorLeafNodes: boolean;
+	searchIncludeRoots: boolean;
 }
 
 export const DEFAULT_SETTINGS: MindMapSettings = {
@@ -29,6 +30,7 @@ export const DEFAULT_SETTINGS: MindMapSettings = {
 	mouseNavigation: false,
 	showBacklinks: true,
 	colorLeafNodes: true,
+	searchIncludeRoots: false,
 };
 
 export class MindMapSettingTab extends PluginSettingTab {
@@ -205,6 +207,18 @@ export class MindMapSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showBacklinks)
 					.onChange(async (value) => {
 						this.plugin.settings.showBacklinks = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Include root nodes in search")
+			.setDesc("When disabled, root nodes are excluded from canvas search results since they're visible in the layout")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.searchIncludeRoots)
+					.onChange(async (value) => {
+						this.plugin.settings.searchIncludeRoots = value;
 						await this.plugin.saveSettings();
 					})
 			);

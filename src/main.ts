@@ -18,11 +18,13 @@ import { registerGroupDragHandler } from "./canvas/group-drag";
 import { registerAutoResize, AutoResizeHandle, getEditorElements } from "./ui/auto-resize";
 import { OutlineView, OUTLINE_VIEW_TYPE } from "./ui/outline-view";
 import { freemindToCanvas } from "./import/freemind-import";
-import { getGroupIds, buildForest, findTreeForNode } from "./mindmap/tree-model";
+import { getGroupIds, buildForest, findTreeForNode, getDescendants } from "./mindmap/tree-model";
 import { BacklinkIndex } from "./backlinks/backlink-index";
 import { BacklinkBadges } from "./ui/backlink-badges";
 import { rewriteCanvasPath, repairBrokenLinks } from "./backlinks/link-updater";
 import { NodeSuggest } from "./ui/node-suggest";
+import { CanvasSearchModal } from "./ui/canvas-search";
+import { LinkPreview } from "./ui/link-preview";
 
 export default class CanvasMindMapPlugin extends Plugin {
 	settings: MindMapSettings = DEFAULT_SETTINGS;
@@ -66,6 +68,8 @@ export default class CanvasMindMapPlugin extends Plugin {
 	private cleanupNavHandler: (() => void) | null = null;
 	private backlinkIndex: BacklinkIndex | null = null;
 	private backlinkBadges: BacklinkBadges | null = null;
+	private linkPreview!: LinkPreview;
+	private cleanupLinkPreviewHandler: (() => void) | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -86,6 +90,7 @@ export default class CanvasMindMapPlugin extends Plugin {
 		});
 		this.branchColors = new BranchColors(this.canvasApi, () => this.settings.colorLeafNodes);
 		this.navigation = new Navigation(this.canvasApi);
+		this.linkPreview = new LinkPreview(this.app);
 
 		// Register keyboard shortcuts
 		this.keyboardHandler = new KeyboardHandler(
@@ -262,6 +267,17 @@ export default class CanvasMindMapPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "mindmap-search",
+			name: "Search nodes in canvas",
+			checkCallback: (checking: boolean) => {
+				const canvas = this.canvasApi.getActiveCanvas() ?? this.canvasApi.getAnyCanvas();
+				if (!canvas) return false;
+				if (checking) return true;
+				new CanvasSearchModal(this.app, canvas, this.canvasApi, this.settings).open();
+			},
+		});
+
 		// Watch for canvas view activation to set up UI
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
@@ -359,6 +375,59 @@ export default class CanvasMindMapPlugin extends Plugin {
 									this.updateGroupBounds(canvas);
 								});
 						});
+					}
+
+					if (this.isMindmapCanvas(canvas) && !groupIds.has(node.id)) {
+						const forest = buildForest(canvas);
+						const treeNode = findTreeForNode(forest, node.id);
+						if (treeNode && !treeNode.parent) {
+							const cx = node.x + node.width / 2;
+							const cy = node.y + node.height / 2;
+							let currentGroupId: string | null = null;
+							for (const gid of groupIds) {
+								const g = canvas.nodes.get(gid);
+								if (!g) continue;
+								if (cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height) {
+									currentGroupId = gid;
+									break;
+								}
+							}
+
+							const targetGroups: { id: string; label: string }[] = [];
+							for (const nd of canvas.getData().nodes) {
+								if (nd.type !== "group") continue;
+								if (nd.id === currentGroupId) continue;
+								targetGroups.push({ id: nd.id, label: (nd.label || "").trim() || "Untitled Group" });
+							}
+
+							if (targetGroups.length > 0) {
+								menu.addItem((item) => {
+									item.setTitle("Move to group")
+										.setIcon("folder-input");
+									const sub = item.setSubmenu();
+									for (const tg of targetGroups) {
+										sub.addItem((subItem) => {
+											subItem.setTitle(tg.label).onClick(() => {
+												const groupNode = canvas.nodes.get(tg.id);
+												if (!groupNode) return;
+												const targetX = groupNode.x + groupNode.width / 2 - node.width / 2;
+												const targetY = groupNode.y + groupNode.height / 2 - node.height / 2;
+												const dx = targetX - node.x;
+												const dy = targetY - node.y;
+												node.moveTo({ x: targetX, y: targetY });
+												for (const desc of getDescendants(treeNode)) {
+													desc.canvasNode.moveTo({ x: desc.canvasNode.x + dx, y: desc.canvasNode.y + dy });
+												}
+												this.layoutEngine.layoutForest(canvas, tg.id);
+												if (currentGroupId) this.layoutEngine.layoutForest(canvas, currentGroupId);
+												this.updateGroupBounds(canvas);
+												canvas.requestSave();
+											});
+										});
+									}
+								});
+							}
+						}
 					}
 				}
 			})
@@ -470,6 +539,10 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.cleanupClickHandler();
 			this.cleanupClickHandler = null;
 		}
+		if (this.cleanupLinkPreviewHandler) {
+			this.cleanupLinkPreviewHandler();
+			this.cleanupLinkPreviewHandler = null;
+		}
 		if (this.cleanupDragHandler) {
 			this.cleanupDragHandler();
 			this.cleanupDragHandler = null;
@@ -535,6 +608,10 @@ export default class CanvasMindMapPlugin extends Plugin {
 			this.cleanupClickHandler();
 			this.cleanupClickHandler = null;
 		}
+		if (this.cleanupLinkPreviewHandler) {
+			this.cleanupLinkPreviewHandler();
+			this.cleanupLinkPreviewHandler = null;
+		}
 		if (this.cleanupDragHandler) {
 			this.cleanupDragHandler();
 			this.cleanupDragHandler = null;
@@ -598,6 +675,10 @@ export default class CanvasMindMapPlugin extends Plugin {
 		// Set up Ctrl+click zoom handler
 		this.cleanupClickHandler =
 			this.navigation.registerClickHandler(canvas);
+
+		// Set up Alt+hover link preview
+		this.cleanupLinkPreviewHandler =
+			this.linkPreview.register(canvas);
 
 		// Set up drag-end edge update handler
 		this.cleanupDragHandler =

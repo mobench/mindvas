@@ -456,10 +456,28 @@ export class OutlineView extends ItemView {
 					for (const g of targetGroups) {
 						sub.addItem((subItem) => {
 							subItem.setTitle(g.label).onClick(() => {
-								this.moveTreeToGroup(root, g.node.id, groupId ?? null);
+								if (!this.selectedRoots.has(root)) {
+									this.clearSelection();
+									this.selectedRoots.add(root);
+								}
+								const sourceGroups = new Set<string>();
+								for (const r of this.selectedRoots) {
+									let srcGroupId: string | null = null;
+									for (const sg of this.groups) {
+										if (sg.roots.some(sr => sr.canvasNode.id === r.canvasNode.id)) {
+											srcGroupId = sg.node.id;
+											break;
+										}
+									}
+									if (srcGroupId === g.node.id) continue;
+									this.moveTreeToGroup(r, g.node.id, srcGroupId);
+									if (srcGroupId) sourceGroups.add(srcGroupId);
+								}
 								if (this.onForestLayout && this.lastCanvas) {
 									this.onForestLayout(this.lastCanvas, g.node.id);
-									if (groupId) this.onForestLayout(this.lastCanvas, groupId);
+									for (const gid of sourceGroups) {
+										this.onForestLayout(this.lastCanvas, gid);
+									}
 								}
 								if (this.lastCanvas) this.refresh(this.lastCanvas);
 							});
